@@ -1,0 +1,84 @@
+@page
+@model Ascendia.Pages.AdminDashboardModel
+@{
+    ViewData["Title"] = "Admin Management Portal";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="text-center mb-5">
+        <h2 class="text-primary fw-bold">Ascendia</h2>
+        <h4 class="text-secondary">Admin & Registrar Management Portal</h4>
+    </div>
+
+    <div class="row g-4">
+        <!-- 1. Student Applications -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-success fw-bold">1. Student Applications</h5>
+                    <p class="card-text text-muted small flex-grow-1">Review pending enrollment submissions, view uploaded files (PSA, Form 138), approve or reject with remarks.</p>
+                    <a asp-page="/Admin/StudentApplications" class="btn btn-outline-success mt-auto">Manage Applications</a>
+                </div>
+            </div>
+        </div>
+
+       <!-- 2. Academic Status & Request Logs -->
+<div class="col-md-4">
+    <div class="card shadow-sm h-100 border-primary">
+        <div class="card-body d-flex flex-column">
+            <h5 class="card-title text-primary fw-bold">2. Academic Status & Logs</h5>
+            <p class="card-text text-muted small flex-grow-1">Process Drop Subject, LOA/Stop, and Transfer requests with automatic timestamps and roster updates.</p>
+            <a asp-page="/Admin/AcademicRequests" class="btn btn-outline-primary mt-auto">View Requests</a>
+        </div>
+    </div>
+</div>
+
+        <!-- 3. Departments & Courses -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-info">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-info fw-bold">3. Departments & Courses</h5>
+                    <p class="card-text text-muted small flex-grow-1">CRUD management for institutional departments and programs (e.g., BSCPE) with dynamic descriptions.</p>
+                    <a asp-page="/Admin/CoursesManagement" class="btn btn-outline-info mt-auto">Manage Courses</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Subjects & Class Sections -->
+        <div class="col-md-4">
+            <a asp-page="/Admin/SubjectsSections" class="d-block h-100 text-decoration-none">
+                <div class="card shadow-sm h-100 border-warning">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-warning fw-bold text-dark">4. Subjects &amp; Sections</h5>
+                        <p class="card-text text-muted small flex-grow-1">Masterlist editor for subjects, credit units, class sections, schedules, room assignments, and capacity limits.</p>
+                        <span class="btn btn-outline-warning text-dark mt-auto">Manage Sections</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 5. Payments & Fee Assessment -->
+        <div class="col-md-4">
+            <a asp-page="/Admin/PaymentsAssessment" class="d-block h-100 text-decoration-none">
+                <div class="card shadow-sm h-100 border-danger">
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-danger fw-bold">5. Payments & Assessment</h5>
+                        <p class="card-text text-muted small flex-grow-1">Cashiering dashboard, tuition rates per unit, misc/lab fees, and GCash/receipt verification.</p>
+                        <span class="btn btn-outline-danger mt-auto">Verify Payments</span>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 6. Reports & Student Masterlist -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100 border-dark">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title text-dark fw-bold">6. Reports & Masterlist</h5>
+                    <p class="card-text text-muted small flex-grow-1">Filter students by status, generate printable class lists, and export masterlists to PDF or Excel.</p>
+                    <a asp-page="/Admin/ReportsMasterlist" class="btn btn-outline-dark mt-auto">Generate Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

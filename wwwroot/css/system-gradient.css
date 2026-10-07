@@ -1,0 +1,77 @@
+html {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  background: #b981c0;
+}
+
+body {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: transparent;
+  overflow-x: hidden;
+}
+
+#system-gradient-background,
+.system-gradient-canvas,
+.system-gradient-canvas canvas {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+
+#system-gradient-background {
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 22% 24%, rgba(250, 255, 92, 0.9), transparent 48%),
+    radial-gradient(ellipse at 78% 76%, rgba(255, 207, 117, 0.78), transparent 50%),
+    #b981c0;
+}
+
+.system-gradient-canvas,
+.system-gradient-canvas canvas {
+  pointer-events: none !important;
+  background: transparent !important;
+}
+
+.ascendia-content-layer {
+  position: relative;
+}
+
+.modal {
+  z-index: 1055;
+}
+
+.modal-backdrop {
+  z-index: 1050;
+  pointer-events: auto;
+}
+
+.modal-dialog {
+  pointer-events: none;
+}
+
+.modal-content {
+  pointer-events: auto;
+}
+
+main,
+body > .container {
+  background: transparent !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .card,
+  .login-panel,
+  .department-sidebar {
+    backdrop-filter: none;
+  }
+}

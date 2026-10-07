@@ -1,0 +1,141 @@
+@page
+@model Ascendia.Pages.Admin.ReportsMasterlistModel
+@{
+    ViewData["Title"] = "Reports & Masterlist";
+}
+
+<div class="container mt-4">
+    <h2 class="text-primary fw-bold">Reports & Masterlist</h2>
+    <p class="text-muted">View submitted applications and enrolled student records using the current course details.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Report Actions & Filters Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold">Report Actions & Filters</div>
+        <div class="card-body">
+            <form method="get" asp-page="/Admin/ReportsMasterlist">
+                <div class="row align-items-end">
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <label asp-for="SelectedCategory" class="form-label fw-bold">Select Report Category</label>
+                        <select asp-for="SelectedCategory" asp-items="Model.CourseOptions" class="form-select">
+                            <option value="">All Enrolled Students</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3 mb-md-0">
+                        <label asp-for="SearchTerm" class="form-label fw-bold">Search Student</label>
+                        <input asp-for="SearchTerm"
+                               class="form-control"
+                               placeholder="Student ID / Number or name"
+                               autocomplete="off" />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </div>
+                    <div class="col-md-2 mt-2 mt-md-0">
+                        <!-- Direct Print / PDF Save Button -->
+                        <button type="button" class="btn btn-success w-100" onclick="window.print();">
+                            🖨️ Print / Save PDF
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- System Masterlist Summary Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold">Student Applications and Masterlist</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Full Name</th>
+                            <th>Course Program</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Masterlist != null && Model.Masterlist.Any())
+                        {
+                            @foreach (var item in Model.Masterlist)
+                            {
+                                <tr>
+                                    <td>@(string.IsNullOrWhiteSpace(item.StudentId) ? "Not assigned" : item.StudentId)</td>
+                                    <td>@item.FullName</td>
+                                    <td>
+                                        <span class="badge bg-secondary">@item.CourseCode</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.CourseProgram)
+                                            && !string.Equals(item.CourseProgram, item.CourseCode, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <div class="small text-muted">@item.CourseProgram</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary d-none d-print-inline">@item.Status</span>
+                                        @if (!string.IsNullOrWhiteSpace(item.StudentId))
+                                        {
+                                            <form method="post" asp-page-handler="UpdateStatus" class="d-flex flex-wrap align-items-center gap-2 status-edit-controls">
+                                                <input type="hidden" name="studentNumber" value="@item.StudentId" />
+                                                <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
+                                                <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
+                                                <select name="newStatus" class="form-select form-select-sm" aria-label="Status for @item.FullName" required>
+                                                    <option value="Pending" selected="@(item.Status == "Pending" ? "selected" : null)">Pending</option>
+                                                    <option value="Enrolled" selected="@(item.Status == "Enrolled" ? "selected" : null)">Enrolled</option>
+                                                    <option value="Dropped" selected="@(item.Status == "Dropped" ? "selected" : null)">Dropped</option>
+                                                    <option value="Stopped" selected="@(item.Status == "Stopped" ? "selected" : null)">Stopped</option>
+                                                    <option value="LOA" selected="@(item.Status == "LOA" ? "selected" : null)">LOA</option>
+                                                    <option value="Transferred" selected="@(item.Status == "Transferred" ? "selected" : null)">Transferred</option>
+                                                    <option value="Rejected" selected="@(item.Status == "Rejected" ? "selected" : null)">Rejected</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">Update</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@(string.IsNullOrWhiteSpace(item.Status) ? "Unknown" : item.Status)</span>
+                                            <div class="small text-muted status-edit-controls">Student Number required for updates.</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Walang nakitang rekord.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <style>
+                @@media print {
+                    .status-edit-controls {
+                        display: none !important;
+                    }
+                }
+            </style>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a asp-page="/AdminDashboard" class="btn btn-secondary">&larr; Back to Admin Dashboard</a>
+    </div>
+</div>

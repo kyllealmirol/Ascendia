@@ -1,0 +1,157 @@
+@page
+@model Ascendia.Pages.Admin.StudentApplicationsModel
+@{
+    ViewData["Title"] = "Student Applications Module";
+}
+
+<div class="container mt-4">
+    <h2 class="text-success fw-bold">Student Applications Management</h2>
+    <p class="text-muted">Review pending student applications, verify documents, and approve or reject submissions.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white fw-bold">Pending Enrollment Applications</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Full Name</th>
+                            <th>Course / Program</th>
+                            <th>Student Type</th>
+                            <th>Assigned Section</th> <!-- Idinagdag para sa Auto-Generated Section -->
+                            <th>Documents</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.StudentsList != null && Model.StudentsList.Any())
+                        {
+                            @foreach (var student in Model.StudentsList)
+                            {
+                                <tr>
+                                    <td>@(string.IsNullOrWhiteSpace(student.StudentNumber) ? "Not assigned" : student.StudentNumber)</td>
+                                    <td>@(student.FullName ?? student.StudentName)</td>
+                                    <td>
+                                        <span class="badge bg-secondary">@(student.AcademicCourse?.CourseCode ?? student.CourseCode)</span>
+                                        <div>@(student.AcademicCourse?.CourseName ?? student.Course)</div>
+                                        @if (!string.IsNullOrWhiteSpace(student.AcademicCourse?.Description))
+                                        {
+                                            <div class="small text-muted">@student.AcademicCourse.Description</div>
+                                        }
+                                    </td>
+                                    <td>@student.StudentType</td>
+                                    <td>
+                                        <!-- Nagpapakita ng seksyon kung meron na, o kaya ay N/A habang pending -->
+                                        <span class="badge bg-info text-dark">@(string.IsNullOrEmpty(student.Section) ? "Pending Assignment" : student.Section)</span>
+                                    </td>
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(student.StudentNumber))
+                                        {
+                                            <span class="small text-muted">Student number is required to access documents.</span>
+                                        }
+                                        else
+                                        {
+                                            @if (!string.IsNullOrWhiteSpace(student.Form138Path))
+                                            {
+                                                <a asp-page-handler="Document" asp-route-studentNumber="@student.StudentNumber" asp-route-documentType="form138" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary me-1">Form 138</a>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(student.PsaBirthCertificatePath))
+                                            {
+                                                <a asp-page-handler="Document" asp-route-studentNumber="@student.StudentNumber" asp-route-documentType="psa" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary me-1">PSA</a>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(student.Form137Path))
+                                            {
+                                                <a asp-page-handler="Document" asp-route-studentNumber="@student.StudentNumber" asp-route-documentType="form137" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary me-1">Form 137</a>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(student.GoodMoralPath))
+                                            {
+                                                <a asp-page-handler="Document" asp-route-studentNumber="@student.StudentNumber" asp-route-documentType="goodmoral" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary me-1">Good Moral</a>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(student.TorPath))
+                                            {
+                                                <a asp-page-handler="Document" asp-route-studentNumber="@student.StudentNumber" asp-route-documentType="tor" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary me-1">TOR</a>
+                                            }
+                                            @if (string.IsNullOrWhiteSpace(student.Form138Path)
+                                                && string.IsNullOrWhiteSpace(student.PsaBirthCertificatePath)
+                                                && string.IsNullOrWhiteSpace(student.Form137Path)
+                                                && string.IsNullOrWhiteSpace(student.GoodMoralPath)
+                                                && string.IsNullOrWhiteSpace(student.TorPath))
+                                            {
+                                                <span class="small text-muted">Walang dokumentong na-upload.</span>
+                                            }
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">@student.Status</span>
+                                    </td>
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(student.StudentNumber))
+                                        {
+                                            <span class="small text-muted">Student number is required to process this application.</span>
+                                        }
+                                        else
+                                        {
+                                            <!-- Approve Form -->
+                                            <form method="post" asp-page-handler="Approve" asp-route-studentNumber="@student.StudentNumber" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                            </form>
+
+                                            <!-- Reject Trigger Button -->
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal@(student.Id)">
+                                                Reject
+                                            </button>
+
+                                            <!-- Reject Modal -->
+                                            <form method="post" asp-page-handler="Reject" asp-route-studentNumber="@student.StudentNumber">
+                                                <div class="modal fade" id="rejectModal@(student.Id)" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Reject Application - @(student.FullName ?? student.StudentName)</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">Reason / Remarks for Rejection:</label>
+                                                                    <textarea name="rejectionReason" class="form-control" rows="3" required placeholder="Maglagay ng dahilan kung bakit na-reject ang aplikasyon..."></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-danger">Confirm Reject</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Walang kasalukuyang pending na aplikasyon.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a asp-page="/AdminDashboard" class="btn btn-secondary">&larr; Back to Admin Dashboard</a>
+    </div>
+</div>

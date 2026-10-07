@@ -1,0 +1,37 @@
+@page
+@model Ascendia.Pages.IndexModel
+@{
+    ViewData["Title"] = "Application Process";
+}
+
+<div class="container my-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-primary">Ascendia Enrollment Management System</h2>
+        <h4 class="text-secondary">Application Process</h4>
+    </div>
+
+    <div class="row justify-content-center">
+        @if (Model.Courses.Count == 0)
+        {
+            <div class="col-md-8">
+                <div class="alert alert-info">Wala pang kursong nailalagay. Makipag-ugnayan sa Registrar.</div>
+            </div>
+        }
+        else
+        {
+            @foreach (var course in Model.Courses)
+            {
+                <div class="col-md-8 mb-4">
+                    <div class="card course-card shadow-sm border-success h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold text-success">@course.CourseCode</h5>
+                            <h6>@course.CourseName</h6>
+                            <p class="text-muted">@course.Description</p>
+                            <a asp-page="/EnrollForm" asp-route-course="@course.CourseCode" class="btn btn-success w-50">Proceed</a>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

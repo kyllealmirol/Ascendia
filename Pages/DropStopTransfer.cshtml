@@ -1,0 +1,131 @@
+@page "/DropStopTransfer"
+@model Ascendia.Pages.DropStopTransferModel
+
+@{
+    ViewData["Title"] = "Drop, Stop & Transfer Requests";
+}
+
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm p-4">
+                <div class="text-center mb-4">
+                    <h3 class="text-danger fw-bold"><i class="fas fa-exchange-alt me-2"></i>Drop, Stop & Transfer Request Portal</h3>
+                    <p class="text-muted">Please submit this form if you wish to drop a subject, take a Leave of Absence (Stop), or transfer to another course/program.</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @Model.SuccessMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Student Number</label>
+                            <input asp-for="TransferRequest.StudentNumber" class="form-control" placeholder="Ex. 2026-00123" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Full Name</label>
+                            <input asp-for="TransferRequest.StudentName" class="form-control" placeholder="Full Name" required />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Current Course / Program</label>
+                            <input asp-for="TransferRequest.CurrentCourse" class="form-control" placeholder="Ex. BS Computer Engineering" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Request Type</label>
+                            <select asp-for="TransferRequest.RequestType" class="form-select" id="requestTypeSelect" onchange="updateReasonOptions()" required>
+                                <option value="">Select Request Type...</option>
+                                <option value="Transfer">Transfer (Change Course / Section / Program)</option>
+                                <option value="Drop">Drop (Drop a Subject)</option>
+                                <option value="Stop">Stop (Withdraw from enrollment)</option>
+                                <option value="LOA">Leave of Absence (LOA)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Reason Category</label>
+                        <select asp-for="TransferRequest.ReasonCategory" class="form-select" required>
+                            <option value="">Please select a Request Type first...</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Additional Details (Optional)</label>
+                        <textarea asp-for="TransferRequest.AdditionalDetails" class="form-control" rows="3" placeholder="Provide additional details regarding your request..."></textarea>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-danger btn-lg">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const selectedReason = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.TransferRequest.ReasonCategory ?? string.Empty));
+
+        function updateReasonOptions() {
+            var type = document.getElementById("requestTypeSelect").value;
+            var reasonSelect = document.querySelector("select[name='TransferRequest.ReasonCategory']");
+            var previousReason = reasonSelect.value;
+            
+            reasonSelect.innerHTML = '<option value="">Select a reason...</option>';
+
+            var options = [];
+            if (type === "Transfer") {
+                options = [
+                    "Academic / Career Alignment (Change of Interest)",
+                    "Relocation / Change of Address",
+                    "Financial Consideration",
+                    "Personal / Family Reasons"
+                ];
+            } else if (type === "Drop") {
+                options = [
+                    "Prerequisite Conflict / Schedule Issue",
+                    "Academic Overload / Time Management",
+                    "Financial Constraints",
+                    "Health / Medical Reasons"
+                ];
+            } else if (type === "Stop") {
+                options = [
+                    "Financial Difficulties (Need to work/save)",
+                    "Medical / Health Issues (Extended recovery)",
+                    "Family Responsibilities",
+                    "Employment Opportunities"
+                ];
+            } else if (type === "LOA") {
+                options = [
+                    "Financial Difficulties (Need to work/save)",
+                    "Medical / Health Issues (Extended recovery)",
+                    "Family Responsibilities",
+                    "Employment Opportunities"
+                ];
+            }
+
+            options.forEach(function(opt) {
+                var el = document.createElement("option");
+                el.value = opt;
+                el.textContent = opt;
+                if (opt === previousReason || opt === selectedReason) {
+                    el.selected = true;
+                }
+                reasonSelect.appendChild(el);
+            });
+        }
+
+        updateReasonOptions();
+    </script>
+}

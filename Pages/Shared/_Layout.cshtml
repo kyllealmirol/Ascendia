@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Ascendia</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/system-gradient.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Ascendia.styles.css" asp-append-version="true" />
+    @if (ViewData["HideSiteChrome"] is true)
+    {
+        <link rel="stylesheet" href="~/css/login.css" asp-append-version="true" />
+    }
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+</head>
+<body>
+    <div id="system-gradient-background" aria-hidden="true"></div>
+
+    @if (ViewData["HideSiteChrome"] is not true)
+    {
+    <header class="ascendia-content-layer">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm site-navbar mb-3">
+            <div class="container">
+                <a class="navbar-brand fw-bold" asp-area="" asp-page="/Index">Ascendia</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link @(Context.Request.Path == "/" ? "active" : "")" aria-current="@(Context.Request.Path == "/" ? "page" : null)" asp-area="" asp-page="/Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link @(Context.Request.Path == "/AboutUs" ? "active" : "")" aria-current="@(Context.Request.Path == "/AboutUs" ? "page" : null)" asp-area="" asp-page="/AboutUs">About Us</a>
+                        </li>
+                        <!-- Registrar / Admin Link -->
+                        <li class="nav-item">
+                            <a class="nav-link @(Context.Request.Path == "/AdminDashboard" ? "active" : "")" aria-current="@(Context.Request.Path == "/AdminDashboard" ? "page" : null)" asp-page="/AdminDashboard">Registrar Panel</a>
+                        </li>
+                    </ul>
+
+                    <div class="site-nav-actions d-flex">
+                        <a asp-page="/DropStopTransfer" class="btn btn-outline-warning btn-sm fw-bold me-2">
+                            <i class="fas fa-exchange-alt me-1"></i> Drop, Stop &amp; Transfer Requests
+                        </a>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <a asp-page="/Account/ChangeCredentials" class="btn btn-outline-light btn-sm me-2">Account Settings</a>
+                            <form method="post" asp-page="/Account/Logout">
+                                <button type="submit" class="btn btn-outline-light btn-sm">Sign out</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <a asp-page="/Account/Login" class="btn btn-warning btn-sm fw-bold">Registrar sign in</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    }
+
+    @if (ViewData["HideSiteChrome"] is true)
+    {
+        <main role="main" class="ascendia-content-layer">
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        <div class="container">
+            <main role="main" class="ascendia-content-layer pb-3">
+                @RenderBody()
+            </main>
+        </div>
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script type="module" src="~/js/gradient/login-gradient.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

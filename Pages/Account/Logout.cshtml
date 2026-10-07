@@ -1,0 +1,13 @@
+@page
+@model Ascendia.Pages.Account.LogoutModel
+@{
+    ViewData["Title"] = "Sign out";
+}
+
+<div class="container mt-4">
+    <h1 class="h3">Sign out</h1>
+    <form method="post">
+        <button type="submit" class="btn btn-danger">Sign out</button>
+        <a asp-page="/AdminDashboard" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+</div>

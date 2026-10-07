@@ -1,0 +1,233 @@
+@page
+@model Ascendia.Pages.Admin.SubjectsSectionsModel
+@{
+    ViewData["Title"] = "Subjects & Sections Management";
+}
+
+<div class="container mt-4">
+    <h2 class="text-primary fw-bold">Subjects & Sections Management</h2>
+    <p class="text-muted">Manage class schedules, credit units, room assignments, and section capacity limits.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold">Department, Year & Semester Filters</div>
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label asp-for="SelectedCourseCode" class="form-label">Department / Course</label>
+                    <select asp-for="SelectedCourseCode" asp-items="Model.CourseOptions" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Courses</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="SelectedYearLevel" class="form-label">Year Level</label>
+                    <select asp-for="SelectedYearLevel" asp-items="Model.YearLevelOptions" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Year Levels</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="SelectedSemester" class="form-label">Semester</label>
+                    <select asp-for="SelectedSemester" asp-items="Model.SemesterOptions" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Semesters</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <a asp-page="./SubjectsSections" class="btn btn-outline-secondary w-100">Clear Filters</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add New Section / Subject Form -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white fw-bold">Add New Subject & Section</div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                <input type="hidden" asp-for="SelectedCourseCode" />
+                <input type="hidden" asp-for="SelectedYearLevel" />
+                <input type="hidden" asp-for="SelectedSemester" />
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <div class="col-md-2">
+                    <label class="form-label">Subject Code</label>
+                    <input type="text" asp-for="NewSubject.SubjectCode" class="form-control" required placeholder="e.g. CPE 411" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Subject Description</label>
+                    <input type="text" asp-for="NewSubject.SubjectName" class="form-control" required placeholder="e.g. Engineering Management" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Section</label>
+                    <input type="text" asp-for="NewSubject.SectionName" class="form-control" required placeholder="e.g. 4A" />
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Units</label>
+                    <input type="number" asp-for="NewSubject.Units" class="form-control" required min="1" max="10" value="3" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Course</label>
+                    <select asp-for="NewSubject.CourseCode" asp-items="Model.CourseOptions" class="form-select" required>
+                        <option value="">Select Course</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Year</label>
+                    <select asp-for="NewSubject.YearLevel" asp-items="Model.YearLevelOptions" class="form-select" required>
+                        <option value="">Year</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">Semester</label>
+                    <select asp-for="NewSubject.Semester" asp-items="Model.SemesterOptions" class="form-select" required>
+                        <option value="">Sem</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100">Add Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subjects & Sections List Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold">Masterlist of Subjects & Sections</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Subject Code</th>
+                            <th>Subject Name</th>
+                            <th>Course</th>
+                            <th>Year & Semester</th>
+                            <th>Section</th>
+                            <th>Units</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.SubjectsList != null && Model.SubjectsList.Any())
+                        {
+                            @foreach (var item in Model.SubjectsList)
+                            {
+                                <tr>
+                                    <td>@item.Id</td>
+                                    <td><span class="badge bg-secondary">@item.SubjectCode</span></td>
+                                    <td>@item.SubjectName</td>
+                                    <td>@item.CourseCode</td>
+                                    <td>@item.YearLevel - @item.Semester</td>
+                                    <td><span class="badge bg-info text-dark">@item.SectionName</span></td>
+                                    <td>@item.Units</td>
+                                    <td>
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline">
+                                            <input type="hidden" asp-for="SelectedCourseCode" />
+                                            <input type="hidden" asp-for="SelectedYearLevel" />
+                                            <input type="hidden" asp-for="SelectedSemester" />
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Sigurado ka bang gusto mong tanggalin ang record na ito?');">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">Walang pang nakatalang subject o section para sa filters na ito.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span>Student Section Masterlist</span>
+            <form method="post" asp-page-handler="AutoSection" class="m-0">
+                <input type="hidden" asp-for="SelectedCourseCode" />
+                <input type="hidden" asp-for="SelectedYearLevel" />
+                <input type="hidden" asp-for="SelectedSemester" />
+                <button type="submit" class="btn btn-sm btn-warning"
+                        onclick="return confirm('I-a-update ang section ng lahat ng Enrolled students sa napiling course, year, at semester. Magpatuloy?');">
+                    Automatically Assign Sections
+                </button>
+            </form>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Student Number</th>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Year & Semester</th>
+                            <th>Section</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.StudentSections.Any())
+                        {
+                            @foreach (var student in Model.StudentSections)
+                            {
+                                <tr>
+                                    <td>@student.StudentNumber</td>
+                                    <td>@student.FullName</td>
+                                    <td>@student.CourseCode</td>
+                                    <td>@student.YearAndSemester</td>
+                                    <td>
+                                        @if (!string.IsNullOrWhiteSpace(student.Section))
+                                        {
+                                            <span class="badge bg-info text-dark">@student.Section</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (student.IsSpecialStatus)
+                                        {
+                                            <span class="badge bg-danger">@student.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@student.Status</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">Walang estudyanteng tumutugma sa filters na ito.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a asp-page="/AdminDashboard" class="btn btn-secondary">&larr; Back to Admin Dashboard</a>
+    </div>
+</div>

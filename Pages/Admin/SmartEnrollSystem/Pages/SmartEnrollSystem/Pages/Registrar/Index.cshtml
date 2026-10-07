@@ -1,0 +1,28 @@
+<div class="container mt-4">
+    <h2 class="text-primary fw-bold">Registrar Panel</h2>
+    <p class="text-muted">Welcome to the Registrar Panel. Here you can manage student enrollments and access various reports.</p>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold">Quick Actions</div>
+        <div class="card-body">
+            <ul class="list-unstyled">
+                <li>
+                    <a asp-page="/Admin/ReportsMasterlist" class="btn btn-primary">View Reports & Masterlist</a>
+                </li>
+                <li>
+                    <a asp-page="/Account/ChangeCredentials" class="btn btn-secondary">Change Credentials</a>
+                </li>
+                <li>
+                    <a asp-page="/Account/Logout" class="btn btn-danger">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold">Recent Activities</div>
+        <div class="card-body">
+            <p class="text-muted">No recent activities to display.</p>
+        </div>
+    </div>
+</div>

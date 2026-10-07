@@ -1,0 +1,27 @@
+<div class="container mt-4">
+    <h2 class="text-primary fw-bold">Login</h2>
+    <p class="text-muted">Please enter your credentials to access the Registrar Panel.</p>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post" asp-page-handler="Login">
+                <div class="mb-3">
+                    <label asp-for="Input.Username" class="form-label fw-bold">Username</label>
+                    <input asp-for="Input.Username" class="form-control" required />
+                    <span asp-validation-for="Input.Username" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label fw-bold">Password</label>
+                    <input asp-for="Input.Password" type="password" class="form-control" required />
+                    <span asp-validation-for="Input.Password" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </div>
+                <div class="text-center">
+                    <p class="text-muted">Forgot your password? <a asp-page="/Account/ChangeCredentials">Reset it here</a>.</p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,27 @@
+.login-page {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    place-items: center;
+    padding: 2rem 1rem;
+}
+
+.login-panel {
+    width: min(100%, 430px);
+    padding: clamp(1.5rem, 5vw, 2.5rem);
+    border: 1px solid rgba(244, 196, 0, 0.55);
+    border-radius: 1.25rem;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(12px);
+}
+
+.login-brand {
+    color: #171717;
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-decoration: none;
+}

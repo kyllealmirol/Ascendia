@@ -1,0 +1,18 @@
+{
+  "name": "ascendia-gradient-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:gradient": "vite build"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.0.0",
+    "@shadergradient/react": "^2.4.20",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}
