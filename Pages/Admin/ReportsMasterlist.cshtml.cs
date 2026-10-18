@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Ascendia.Data;
 using Ascendia.Models;
+using Ascendia.Services;
 using System.IO;
 
 namespace Ascendia.Pages.Admin
@@ -52,11 +53,19 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IEnrollmentEmailSender _enrollmentEmailSender;
+        private readonly ILogger<ReportsMasterlistModel> _logger;
 
-        public ReportsMasterlistModel(AppDbContext context, IWebHostEnvironment environment)
+        public ReportsMasterlistModel(
+            AppDbContext context,
+            IWebHostEnvironment environment,
+            IEnrollmentEmailSender enrollmentEmailSender,
+            ILogger<ReportsMasterlistModel> logger)
         {
             _context = context;
             _environment = environment;
+            _enrollmentEmailSender = enrollmentEmailSender;
+            _logger = logger;
         }
 
         [BindProperty(SupportsGet = true)]
@@ -207,6 +216,22 @@ namespace Ascendia.Pages.Admin
                 _context.AcademicRequests.RemoveRange(relatedRequests);
                 _context.Students.Remove(student);
                 await _context.SaveChangesAsync(cancellationToken);
+
+                try
+                {
+                    await _enrollmentEmailSender.SendRejectionNotificationAsync(
+                        student,
+                        rejectionReason: null,
+                        cancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(
+                        exception,
+                        "Student application {StudentNumber} was deleted, but the rejection email to {Email} could not be sent.",
+                        studentNumber,
+                        student.Email);
+                }
 
                 return new JsonResult(new
                 {

@@ -19,6 +19,11 @@ public interface IEnrollmentEmailSender
     Task SendEnrollmentConfirmationAsync(
         Student student,
         CancellationToken cancellationToken);
+
+    Task SendRejectionNotificationAsync(
+        Student student,
+        string? rejectionReason,
+        CancellationToken cancellationToken);
 }
 
 public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
@@ -79,6 +84,59 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
         {
             From = new MailAddress(_settings.Email, "Ascendia Student Enrollment"),
             Subject = "Enrollment application confirmation",
+            Body = body,
+            BodyEncoding = Encoding.UTF8,
+            SubjectEncoding = Encoding.UTF8,
+            IsBodyHtml = false
+        };
+        message.To.Add(new MailAddress(student.Email));
+
+        using var client = new SmtpClient(_settings.Host, _settings.Port)
+        {
+            EnableSsl = true,
+            Credentials = new NetworkCredential(_settings.Email, _settings.Password)
+        };
+
+        await client.SendMailAsync(message, cancellationToken);
+    }
+
+    public async Task SendRejectionNotificationAsync(
+        Student student,
+        string? rejectionReason,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.Host)
+            || _settings.Port is < 1 or > 65535
+            || string.IsNullOrWhiteSpace(_settings.Email)
+            || string.IsNullOrWhiteSpace(_settings.Password))
+        {
+            throw new InvalidOperationException(
+                "SMTP settings are incomplete. Configure SmtpSettings:Host, Port, Email, and Password.");
+        }
+
+        if (string.IsNullOrWhiteSpace(student.Email))
+        {
+            throw new InvalidOperationException(
+                "A student email address is required to send the rejection notification.");
+        }
+
+        var body = new StringBuilder()
+            .AppendLine($"Hello {student.FullName ?? student.StudentName},")
+            .AppendLine()
+            .AppendLine("We regret to inform you that your enrollment application has been rejected.")
+            .AppendLine($"Course / Department: {student.Course}")
+            .AppendLine($"Student Number: {student.StudentNumber}")
+            .AppendLine()
+            .AppendLine("Reason / Remarks:")
+            .AppendLine(string.IsNullOrWhiteSpace(rejectionReason)
+                ? "Please contact the Registrar for more information."
+                : rejectionReason.Trim())
+            .ToString();
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(_settings.Email, "Ascendia Student Enrollment"),
+            Subject = "Enrollment application status",
             Body = body,
             BodyEncoding = Encoding.UTF8,
             SubjectEncoding = Encoding.UTF8,

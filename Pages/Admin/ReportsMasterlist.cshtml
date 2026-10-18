@@ -255,8 +255,9 @@
                     submitButton.disabled = true;
                 }
 
+                let response;
                 try {
-                    const response = await fetch(form.action, {
+                    response = await fetch(form.action, {
                         method: "POST",
                         body: new FormData(form),
                         headers: { "X-Requested-With": "XMLHttpRequest" }
@@ -285,6 +286,11 @@
                     alert.append(closeButton);
                     document.querySelector(".container.mt-4")?.prepend(alert);
                 } catch (error) {
+                    console.error("Failed to reject student application.", {
+                        error,
+                        status: response?.status,
+                        statusText: response?.statusText
+                    });
                     window.alert(error.message || "Nagkaroon ng error sa pag-delete ng application.");
                     if (submitButton) {
                         submitButton.disabled = false;

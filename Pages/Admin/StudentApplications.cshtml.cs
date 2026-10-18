@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Ascendia.Data;
 using Ascendia.Models;
+using Ascendia.Services;
 using System.IO;
 
 namespace Ascendia.Pages.Admin
@@ -14,11 +15,19 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IEnrollmentEmailSender _enrollmentEmailSender;
+        private readonly ILogger<StudentApplicationsModel> _logger;
 
-        public StudentApplicationsModel(AppDbContext context, IWebHostEnvironment environment)
+        public StudentApplicationsModel(
+            AppDbContext context,
+            IWebHostEnvironment environment,
+            IEnrollmentEmailSender enrollmentEmailSender,
+            ILogger<StudentApplicationsModel> logger)
         {
             _context = context;
             _environment = environment;
+            _enrollmentEmailSender = enrollmentEmailSender;
+            _logger = logger;
         }
 
         public IList<Student> StudentsList { get; set; } = default!;
@@ -68,7 +77,10 @@ namespace Ascendia.Pages.Admin
             return RedirectToPage();
         }
 
-        public async Task<IActionResult> OnPostRejectAsync(int id)
+        public async Task<IActionResult> OnPostRejectAsync(
+            int id,
+            string? rejectionReason,
+            CancellationToken cancellationToken)
         {
             if (id <= 0)
             {
@@ -76,16 +88,41 @@ namespace Ascendia.Pages.Admin
             }
 
             var application = await _context.Students
-                .SingleOrDefaultAsync(candidate => candidate.Id == id);
+                .SingleOrDefaultAsync(candidate => candidate.Id == id, cancellationToken);
             if (application is null)
             {
                 return NotFound();
             }
 
+            var studentForNotification = application;
+            var relatedRequests = await _context.AcademicRequests
+                .Where(request => request.StudentId == application.Id)
+                .ToListAsync(cancellationToken);
+            _context.AcademicRequests.RemoveRange(relatedRequests);
             _context.Students.Remove(application);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
-            TempData["SuccessMessage"] = "Matagumpay na na-delete ang enrollment application.";
+            var emailSent = true;
+            try
+            {
+                await _enrollmentEmailSender.SendRejectionNotificationAsync(
+                    studentForNotification,
+                    rejectionReason,
+                    cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                emailSent = false;
+                _logger.LogError(
+                    exception,
+                    "Student application {StudentId} was deleted, but the rejection email to {Email} could not be sent.",
+                    id,
+                    studentForNotification.Email);
+            }
+
+            TempData["SuccessMessage"] = emailSent
+                ? "Matagumpay na na-delete ang enrollment application at naipadala ang rejection email."
+                : "Matagumpay na na-delete ang enrollment application, pero hindi naipadala ang rejection email.";
             return RedirectToPage();
         }
 
