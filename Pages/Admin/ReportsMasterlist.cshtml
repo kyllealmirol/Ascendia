@@ -283,7 +283,9 @@
                     }
 
                     const alert = document.createElement("div");
-                    alert.className = "alert alert-success alert-dismissible fade show";
+                    alert.className = result.emailSent
+                        ? "alert alert-success alert-dismissible fade show"
+                        : "alert alert-warning alert-dismissible fade show";
                     alert.setAttribute("role", "alert");
                     alert.textContent = result.message;
                     const closeButton = document.createElement("button");

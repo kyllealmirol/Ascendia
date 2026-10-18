@@ -35,11 +35,18 @@ builder.Services.AddDataProtection()
 
 builder.Services.Configure<BrevoSettings>(
     builder.Configuration.GetSection("Brevo"));
+builder.Services.PostConfigure<BrevoSettings>(settings =>
+{
+    if (string.IsNullOrWhiteSpace(settings.SenderEmail))
+    {
+        settings.SenderEmail = builder.Configuration["EmailSettings:SenderEmail"] ?? string.Empty;
+    }
+});
 builder.Services.AddSingleton<EnrollmentEmailQueue>();
 builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
 {
     client.BaseAddress = new Uri("https://api.brevo.com/v3/");
-    client.Timeout = TimeSpan.FromSeconds(25);
+    client.Timeout = TimeSpan.FromSeconds(15);
 });
 builder.Services.AddHostedService<EnrollmentEmailWorker>();
 

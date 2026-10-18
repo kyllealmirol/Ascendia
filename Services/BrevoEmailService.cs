@@ -7,12 +7,14 @@ namespace Ascendia.Services;
 public sealed class BrevoSettings
 {
     public string ApiKey { get; set; } = string.Empty;
-    public string FromEmail { get; set; } = string.Empty;
-    public string FromName { get; set; } = "Ascendia Registrar";
+    public string SenderEmail { get; set; } = string.Empty;
+    public string SenderName { get; set; } = "Ascendia Registrar";
 }
 
 public interface IEmailService
 {
+    bool IsConfigured { get; }
+
     Task SendEnrollmentConfirmationAsync(
         Student student,
         CancellationToken cancellationToken);
@@ -24,6 +26,10 @@ public interface IEmailService
 
     Task SendApprovalNotificationAsync(
         Student student,
+        CancellationToken cancellationToken);
+
+    Task SendTestEmailAsync(
+        string recipient,
         CancellationToken cancellationToken);
 }
 
@@ -42,6 +48,10 @@ public sealed class BrevoEmailService : IEmailService
     private readonly HttpClient _httpClient;
     private readonly BrevoSettings _settings;
     private readonly ILogger<BrevoEmailService> _logger;
+
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(_settings.ApiKey)
+        && !string.IsNullOrWhiteSpace(_settings.SenderEmail);
 
     public BrevoEmailService(
         HttpClient httpClient,
@@ -62,10 +72,10 @@ public sealed class BrevoEmailService : IEmailService
             CollegeRequirements.Select(requirement => $"- {requirement}"));
         var body = string.Join(
             Environment.NewLine,
-            $"Hello {student.FullName},",
+            $"Hello {student.FullName ?? student.StudentName},",
             "",
             "We have received your enrollment application.",
-            $"Course / Department: {student.Course}",
+            $"Course / Department: {GetCourseName(student)}",
             $"Student Number: {student.StudentNumber}",
             "",
             "Please prepare or submit these College Requirements to the Registrar:",
@@ -89,7 +99,7 @@ public sealed class BrevoEmailService : IEmailService
             $"Hello {student.FullName ?? student.StudentName},",
             "",
             "Your enrollment application has been approved.",
-            $"Course / Department: {student.Course}",
+            $"Course / Department: {GetCourseName(student)}",
             $"Student Number: {student.StudentNumber}",
             $"Section: {student.Section}",
             "",
@@ -112,7 +122,7 @@ public sealed class BrevoEmailService : IEmailService
             $"Hello {student.FullName ?? student.StudentName},",
             "",
             "We regret to inform you that your enrollment application has been rejected.",
-            $"Course / Department: {student.Course}",
+            $"Course / Department: {GetCourseName(student)}",
             $"Student Number: {student.StudentNumber}",
             "",
             "Reason / Remarks:",
@@ -127,59 +137,64 @@ public sealed class BrevoEmailService : IEmailService
             cancellationToken);
     }
 
+    public Task SendTestEmailAsync(
+        string recipient,
+        CancellationToken cancellationToken)
+    {
+        return SendEmailAsync(
+            recipient,
+            "Ascendia email delivery test",
+            "This is a test email from the Ascendia Registrar Portal. The Brevo email configuration is working.",
+            null,
+            cancellationToken);
+    }
+
     private async Task SendEmailAsync(
         Student student,
         string subject,
         string text,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.ApiKey))
+        await SendEmailAsync(student.Email, subject, text, student.StudentNumber, cancellationToken);
+    }
+
+    private async Task SendEmailAsync(
+        string? recipient,
+        string subject,
+        string text,
+        string? studentNumber,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.ApiKey)
+            || string.IsNullOrWhiteSpace(_settings.SenderEmail))
         {
-            var exception = new InvalidOperationException(
-                "Brevo API key is missing. Configure Brevo:ApiKey.");
-            _logger.LogError(
-                exception,
-                "Cannot send {EmailSubject} email for student {StudentNumber}: Brevo API key is not configured.",
+            _logger.LogWarning(
+                "Brevo email is not configured; skipping {EmailSubject} email to {Recipient}. Set Brevo:ApiKey and Brevo:SenderEmail.",
                 subject,
-                student.StudentNumber);
-            throw exception;
+                recipient);
+            return;
         }
 
-        if (string.IsNullOrWhiteSpace(_settings.FromEmail))
+        if (string.IsNullOrWhiteSpace(recipient))
         {
-            var exception = new InvalidOperationException(
-                "Brevo sender address is missing. Configure Brevo:FromEmail with a verified sender address.");
-            _logger.LogError(
-                exception,
-                "Cannot send {EmailSubject} email for student {StudentNumber}: Brevo sender address is not configured.",
-                subject,
-                student.StudentNumber);
-            throw exception;
-        }
-
-        if (string.IsNullOrWhiteSpace(student.Email))
-        {
-            var exception = new InvalidOperationException(
-                "A student email address is required to send this notification.");
-            _logger.LogError(
-                exception,
+            _logger.LogWarning(
                 "Cannot send {EmailSubject} email for student {StudentNumber}: recipient address is empty.",
                 subject,
-                student.StudentNumber);
-            throw exception;
+                studentNumber);
+            return;
         }
 
         _logger.LogInformation(
-            "Sending {EmailSubject} email via Brevo for student {StudentNumber} to {Recipient}.",
+            "Sending {EmailSubject} email via Brevo to {Recipient} for student {StudentNumber}.",
             subject,
-            student.StudentNumber,
-            student.Email);
+            recipient,
+            studentNumber);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "smtp/email");
         request.Headers.TryAddWithoutValidation("api-key", _settings.ApiKey);
         request.Content = JsonContent.Create(new BrevoEmailRequest(
-            new BrevoSender(_settings.FromName, _settings.FromEmail),
-            [new BrevoRecipient(student.Email)],
+            new BrevoSender(_settings.SenderName, _settings.SenderEmail),
+            [new BrevoRecipient(recipient)],
             subject,
             text));
 
@@ -195,10 +210,10 @@ public sealed class BrevoEmailService : IEmailService
         {
             _logger.LogError(
                 exception,
-                "Brevo request failed for {EmailSubject} email for student {StudentNumber} to {Recipient}.",
+                "Brevo request failed for {EmailSubject} email to {Recipient} for student {StudentNumber}.",
                 subject,
-                student.StudentNumber,
-                student.Email);
+                recipient,
+                studentNumber);
             throw;
         }
 
@@ -207,29 +222,46 @@ public sealed class BrevoEmailService : IEmailService
             if (!response.IsSuccessStatusCode)
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!string.IsNullOrEmpty(_settings.ApiKey))
+                {
+                    responseBody = responseBody.Replace(
+                        _settings.ApiKey,
+                        "[REDACTED]",
+                        StringComparison.Ordinal);
+                }
+
+                if (responseBody.Length > 2000)
+                {
+                    responseBody = responseBody[..2000];
+                }
+
                 var exception = new HttpRequestException(
-                    $"Brevo API returned {(int)response.StatusCode} ({response.StatusCode}).",
+                    $"Brevo API returned {(int)response.StatusCode} ({response.StatusCode}). Response: {responseBody}",
                     inner: null,
                     response.StatusCode);
                 _logger.LogError(
                     exception,
-                    "Brevo rejected {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}. Response: {ResponseBody}",
+                    "Brevo rejected {EmailSubject} email to {Recipient} for student {StudentNumber}. Status: {StatusCode}.",
                     subject,
-                    student.StudentNumber,
-                    student.Email,
-                    (int)response.StatusCode,
-                    responseBody);
+                    recipient,
+                    studentNumber,
+                    (int)response.StatusCode);
                 throw exception;
             }
 
             _logger.LogInformation(
-                "Brevo accepted {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}.",
+                "Brevo accepted {EmailSubject} email to {Recipient} for student {StudentNumber}. Status: {StatusCode}.",
                 subject,
-                student.StudentNumber,
-                student.Email,
+                recipient,
+                studentNumber,
                 (int)response.StatusCode);
         }
     }
+
+    private static string GetCourseName(Student student) =>
+        string.IsNullOrWhiteSpace(student.Course)
+            ? student.CourseCode ?? "Not specified"
+            : student.Course;
 
     private sealed record BrevoEmailRequest(
         BrevoSender Sender,

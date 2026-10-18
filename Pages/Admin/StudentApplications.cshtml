@@ -5,13 +5,25 @@
 }
 
 <div class="container mt-4">
-    <h2 class="text-success fw-bold">Student Applications Management</h2>
-    <p class="text-muted">Review pending student applications, verify documents, and approve or reject submissions.</p>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <h2 class="text-success fw-bold">Student Applications Management</h2>
+            <p class="text-muted mb-0">Review pending student applications, verify documents, and approve or reject submissions.</p>
+        </div>
+        <a asp-page="/Admin/TestEmail" class="btn btn-outline-primary">Test Email Delivery</a>
+    </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            @TempData["ErrorMessage"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -176,7 +188,9 @@
                         }, 260);
 
                         const alert = document.createElement("div");
-                        alert.className = "alert alert-success alert-dismissible fade show";
+                        alert.className = result.emailSent
+                            ? "alert alert-success alert-dismissible fade show"
+                            : "alert alert-warning alert-dismissible fade show";
                         alert.setAttribute("role", "alert");
                         alert.textContent = result.message;
                         const closeButton = document.createElement("button");

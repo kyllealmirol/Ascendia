@@ -1,0 +1,37 @@
+@page
+@model Ascendia.Pages.Admin.TestEmailModel
+@{
+    ViewData["Title"] = "Test Email Delivery";
+}
+
+<div class="container mt-4 mb-5">
+    <h1 class="h2 text-primary fw-bold">Test Email Delivery</h1>
+    <p class="text-muted">Send a one-time test message through the configured Brevo account.</p>
+
+    @if (!string.IsNullOrWhiteSpace(Model.ResultMessage))
+    {
+        <div class="alert @(Model.EmailSent ? "alert-success" : "alert-warning")" role="status">
+            @Model.ResultMessage
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                <div class="mb-3">
+                    <label asp-for="Recipient" class="form-label">Recipient email address</label>
+                    <input asp-for="Recipient" type="email" class="form-control" autocomplete="email" required />
+                    <span asp-validation-for="Recipient" class="text-danger"></span>
+                </div>
+                <button type="submit" class="btn btn-primary" disabled="@(!Model.EmailServiceConfigured)">
+                    Send test email
+                </button>
+                @if (!Model.EmailServiceConfigured)
+                {
+                    <p class="text-warning mt-3 mb-0">Configure Brevo__ApiKey and Brevo__SenderEmail before sending.</p>
+                }
+            </form>
+        </div>
+    </div>
+</div>

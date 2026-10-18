@@ -45,13 +45,18 @@ namespace Ascendia.Pages.Admin
             CancellationToken cancellationToken)
         {
             studentNumber = studentNumber?.Trim();
+            _logger.LogInformation(
+                "Approve handler started for student {StudentNumber}.",
+                studentNumber);
             if (string.IsNullOrWhiteSpace(studentNumber))
             {
                 return BadRequest();
             }
 
             var student = await _context.Students
-                .SingleOrDefaultAsync(candidate => candidate.StudentNumber == studentNumber);
+                .SingleOrDefaultAsync(
+                    candidate => candidate.StudentNumber == studentNumber,
+                    cancellationToken);
             if (student == null)
             {
                 return NotFound();
@@ -73,22 +78,20 @@ namespace Ascendia.Pages.Admin
                 student.Section = $"{coursePrefix}-4A";
             }
 
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(cancellationToken);
 
+            var emailSent = _emailService.IsConfigured && !string.IsNullOrWhiteSpace(student.Email);
             try
             {
                 _logger.LogInformation(
-                    "Sending approval notification for student {StudentNumber} to {Email}.",
-                    student.StudentNumber,
-                    student.Email);
+                    "Sending approval notification to {Recipient} for student {StudentNumber}.",
+                    student.Email,
+                    student.StudentNumber);
                 await _emailService.SendApprovalNotificationAsync(student, cancellationToken);
-                _logger.LogInformation(
-                    "Approval notification sent for student {StudentNumber} to {Email}.",
-                    student.StudentNumber,
-                    student.Email);
             }
             catch (Exception exception)
             {
+                emailSent = false;
                 _logger.LogError(
                     exception,
                     "Approval was saved for student {StudentNumber}, but the notification to {Email} failed.",
@@ -96,7 +99,19 @@ namespace Ascendia.Pages.Admin
                     student.Email);
             }
 
-            TempData["SuccessMessage"] = $"Matagumpay na na-approve ang aplikasyon ni {student.FullName} at itinalaga sa seksyong {student.Section}!";
+            if (emailSent)
+            {
+                _logger.LogInformation(
+                    "Approval notification sent to {Recipient} for student {StudentNumber}.",
+                    student.Email,
+                    student.StudentNumber);
+                TempData["SuccessMessage"] = $"Na-approve ang aplikasyon ni {student.FullName ?? student.StudentName} at naipadala ang email.";
+            }
+            else
+            {
+                TempData["ErrorMessage"] = $"Na-approve ang aplikasyon ni {student.FullName ?? student.StudentName}, pero hindi naipadala ang email. Tingnan ang email configuration at logs.";
+            }
+
             return RedirectToPage();
         }
 
@@ -109,6 +124,7 @@ namespace Ascendia.Pages.Admin
                 return BadRequest();
             }
 
+            _logger.LogInformation("Reject handler started for student application {StudentId}.", id);
             var application = await _context.Students
                 .SingleOrDefaultAsync(candidate => candidate.Id == id, cancellationToken);
             if (application is null)
@@ -116,6 +132,16 @@ namespace Ascendia.Pages.Admin
                 return NotFound();
             }
 
+            var notificationStudent = new Student
+            {
+                StudentNumber = application.StudentNumber,
+                FullName = application.FullName,
+                StudentName = application.StudentName,
+                Email = application.Email,
+                Course = application.Course,
+                CourseCode = application.CourseCode
+            };
+            var recipient = notificationStudent.Email;
             var relatedRequests = await _context.AcademicRequests
                 .Where(request => request.StudentId == application.Id)
                 .ToListAsync(cancellationToken);
@@ -123,35 +149,51 @@ namespace Ascendia.Pages.Admin
             _context.Students.Remove(application);
             await _context.SaveChangesAsync(cancellationToken);
 
+            var emailSent = _emailService.IsConfigured && !string.IsNullOrWhiteSpace(recipient);
             try
             {
                 _logger.LogInformation(
-                    "Sending rejection notification for deleted application {StudentNumber} to {Email}.",
-                    application.StudentNumber,
-                    application.Email);
+                    "Sending rejection notification to {Recipient} for deleted application {StudentNumber}.",
+                    recipient,
+                    notificationStudent.StudentNumber);
                 await _emailService.SendRejectionNotificationAsync(
-                    application,
+                    notificationStudent,
                     null,
                     cancellationToken);
-                _logger.LogInformation(
-                    "Rejection notification sent for deleted application {StudentNumber} to {Email}.",
-                    application.StudentNumber,
-                    application.Email);
             }
             catch (Exception exception)
             {
+                emailSent = false;
                 _logger.LogError(
                     exception,
                     "Application {StudentId} was deleted, but the rejection notification to {Email} failed.",
                     id,
-                    application.Email);
+                    recipient);
+            }
+
+            if (emailSent)
+            {
+                _logger.LogInformation(
+                    "Rejection notification sent to {Recipient} for deleted application {StudentNumber}.",
+                    recipient,
+                    notificationStudent.StudentNumber);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Application {StudentId} was deleted, but no rejection email was sent to {Recipient}.",
+                    id,
+                    recipient);
             }
 
             return new JsonResult(new
             {
                 success = true,
                 deleted = true,
-                message = "Student application rejected and permanently removed."
+                emailSent,
+                message = emailSent
+                    ? "Student application rejected, permanently removed, and email sent."
+                    : "Student application rejected and permanently removed, but the email was not sent."
             });
         }
 

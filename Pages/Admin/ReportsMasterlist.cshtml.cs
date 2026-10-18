@@ -210,6 +210,19 @@ namespace Ascendia.Pages.Admin
 
             if (string.Equals(newStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
             {
+                _logger.LogInformation(
+                    "Reject status handler started for student {StudentNumber}.",
+                    student.StudentNumber);
+                var notificationStudent = new Student
+                {
+                    StudentNumber = student.StudentNumber,
+                    FullName = student.FullName,
+                    StudentName = student.StudentName,
+                    Email = student.Email,
+                    Course = student.Course,
+                    CourseCode = student.CourseCode
+                };
+                var recipient = notificationStudent.Email;
                 var relatedRequests = await _context.AcademicRequests
                     .Where(request => request.StudentId == student.Id)
                     .ToListAsync(cancellationToken);
@@ -217,35 +230,51 @@ namespace Ascendia.Pages.Admin
                 _context.Students.Remove(student);
                 await _context.SaveChangesAsync(cancellationToken);
 
+                var emailSent = _emailService.IsConfigured && !string.IsNullOrWhiteSpace(recipient);
                 try
                 {
                     _logger.LogInformation(
-                        "Sending rejection notification for deleted application {StudentNumber} to {Email}.",
-                        student.StudentNumber,
-                        student.Email);
+                        "Sending rejection notification to {Recipient} for deleted application {StudentNumber}.",
+                        recipient,
+                        notificationStudent.StudentNumber);
                     await _emailService.SendRejectionNotificationAsync(
-                        student,
+                        notificationStudent,
                         rejectionReason: null,
                         cancellationToken);
-                    _logger.LogInformation(
-                        "Rejection notification sent for deleted application {StudentNumber} to {Email}.",
-                        student.StudentNumber,
-                        student.Email);
                 }
                 catch (Exception exception)
                 {
+                    emailSent = false;
                     _logger.LogError(
                         exception,
                         "Application {StudentNumber} was deleted, but the rejection notification to {Email} failed.",
                         studentNumber,
-                        student.Email);
+                        recipient);
+                }
+
+                if (emailSent)
+                {
+                    _logger.LogInformation(
+                        "Rejection notification sent to {Recipient} for deleted application {StudentNumber}.",
+                        recipient,
+                        notificationStudent.StudentNumber);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Application {StudentNumber} was deleted, but no rejection email was sent to {Recipient}.",
+                        studentNumber,
+                        recipient);
                 }
 
                 return new JsonResult(new
                 {
                     success = true,
                     deleted = true,
-                    message = "Student application rejected and permanently removed."
+                    emailSent,
+                    message = emailSent
+                        ? "Student application rejected, permanently removed, and email sent."
+                        : "Student application rejected and permanently removed, but the email was not sent."
                 });
             }
 
