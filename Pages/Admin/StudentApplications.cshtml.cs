@@ -15,18 +15,18 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
+        private readonly IEmailService _emailService;
         private readonly ILogger<StudentApplicationsModel> _logger;
 
         public StudentApplicationsModel(
             AppDbContext context,
             IWebHostEnvironment environment,
-            EnrollmentEmailQueue enrollmentEmailQueue,
+            IEmailService emailService,
             ILogger<StudentApplicationsModel> logger)
         {
             _context = context;
             _environment = environment;
-            _enrollmentEmailQueue = enrollmentEmailQueue;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -40,7 +40,9 @@ namespace Ascendia.Pages.Admin
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> OnPostApproveAsync(string? studentNumber)
+        public async Task<IActionResult> OnPostApproveAsync(
+            string? studentNumber,
+            CancellationToken cancellationToken)
         {
             studentNumber = studentNumber?.Trim();
             if (string.IsNullOrWhiteSpace(studentNumber))
@@ -73,6 +75,27 @@ namespace Ascendia.Pages.Admin
 
             await _context.SaveChangesAsync();
 
+            try
+            {
+                _logger.LogInformation(
+                    "Sending approval notification for student {StudentNumber} to {Email}.",
+                    student.StudentNumber,
+                    student.Email);
+                await _emailService.SendApprovalNotificationAsync(student, cancellationToken);
+                _logger.LogInformation(
+                    "Approval notification sent for student {StudentNumber} to {Email}.",
+                    student.StudentNumber,
+                    student.Email);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Approval was saved for student {StudentNumber}, but the notification to {Email} failed.",
+                    student.StudentNumber,
+                    student.Email);
+            }
+
             TempData["SuccessMessage"] = $"Matagumpay na na-approve ang aplikasyon ni {student.FullName} at itinalaga sa seksyong {student.Section}!";
             return RedirectToPage();
         }
@@ -100,16 +123,26 @@ namespace Ascendia.Pages.Admin
             _context.Students.Remove(application);
             await _context.SaveChangesAsync(cancellationToken);
 
-            if (!_enrollmentEmailQueue.TryQueueRejection(application, null))
-            {
-                _logger.LogError(
-                    "Application {StudentId} was deleted, but its rejection email could not be queued.",
-                    id);
-            }
-            else
+            try
             {
                 _logger.LogInformation(
-                    "Queued rejection email for deleted application {StudentId} to {Email}.",
+                    "Sending rejection notification for deleted application {StudentNumber} to {Email}.",
+                    application.StudentNumber,
+                    application.Email);
+                await _emailService.SendRejectionNotificationAsync(
+                    application,
+                    null,
+                    cancellationToken);
+                _logger.LogInformation(
+                    "Rejection notification sent for deleted application {StudentNumber} to {Email}.",
+                    application.StudentNumber,
+                    application.Email);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Application {StudentId} was deleted, but the rejection notification to {Email} failed.",
                     id,
                     application.Email);
             }

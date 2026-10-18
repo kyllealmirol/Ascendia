@@ -53,18 +53,18 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
+        private readonly IEmailService _emailService;
         private readonly ILogger<ReportsMasterlistModel> _logger;
 
         public ReportsMasterlistModel(
             AppDbContext context,
             IWebHostEnvironment environment,
-            EnrollmentEmailQueue enrollmentEmailQueue,
+            IEmailService emailService,
             ILogger<ReportsMasterlistModel> logger)
         {
             _context = context;
             _environment = environment;
-            _enrollmentEmailQueue = enrollmentEmailQueue;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -217,16 +217,26 @@ namespace Ascendia.Pages.Admin
                 _context.Students.Remove(student);
                 await _context.SaveChangesAsync(cancellationToken);
 
-                if (!_enrollmentEmailQueue.TryQueueRejection(student, rejectionReason: null))
-                {
-                    _logger.LogError(
-                        "Application {StudentNumber} was deleted, but its rejection email could not be queued.",
-                        studentNumber);
-                }
-                else
+                try
                 {
                     _logger.LogInformation(
-                        "Queued rejection email for deleted application {StudentNumber} to {Email}.",
+                        "Sending rejection notification for deleted application {StudentNumber} to {Email}.",
+                        student.StudentNumber,
+                        student.Email);
+                    await _emailService.SendRejectionNotificationAsync(
+                        student,
+                        rejectionReason: null,
+                        cancellationToken);
+                    _logger.LogInformation(
+                        "Rejection notification sent for deleted application {StudentNumber} to {Email}.",
+                        student.StudentNumber,
+                        student.Email);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogError(
+                        exception,
+                        "Application {StudentNumber} was deleted, but the rejection notification to {Email} failed.",
                         studentNumber,
                         student.Email);
                 }

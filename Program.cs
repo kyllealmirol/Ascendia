@@ -32,12 +32,12 @@ builder.Services.AddDataProtection()
     .SetApplicationName("Ascendia")
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 
-builder.Services.Configure<ResendSettings>(
-    builder.Configuration.GetSection("Resend"));
+builder.Services.Configure<BrevoSettings>(
+    builder.Configuration.GetSection("Brevo"));
 builder.Services.AddSingleton<EnrollmentEmailQueue>();
-builder.Services.AddHttpClient<IEmailService, ResendEmailService>(client =>
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
 {
-    client.BaseAddress = new Uri("https://api.resend.com/");
+    client.BaseAddress = new Uri("https://api.brevo.com/v3/");
     client.Timeout = TimeSpan.FromSeconds(25);
 });
 builder.Services.AddHostedService<EnrollmentEmailWorker>();

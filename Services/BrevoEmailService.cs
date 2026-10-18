@@ -1,14 +1,14 @@
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ascendia.Models;
 using Microsoft.Extensions.Options;
 
 namespace Ascendia.Services;
 
-public sealed class ResendSettings
+public sealed class BrevoSettings
 {
     public string ApiKey { get; set; } = string.Empty;
-    public string From { get; set; } = string.Empty;
+    public string FromEmail { get; set; } = string.Empty;
+    public string FromName { get; set; } = "Ascendia Registrar";
 }
 
 public interface IEmailService
@@ -21,9 +21,13 @@ public interface IEmailService
         Student student,
         string? rejectionReason,
         CancellationToken cancellationToken);
+
+    Task SendApprovalNotificationAsync(
+        Student student,
+        CancellationToken cancellationToken);
 }
 
-public sealed class ResendEmailService : IEmailService
+public sealed class BrevoEmailService : IEmailService
 {
     private static readonly string[] CollegeRequirements =
     [
@@ -36,13 +40,13 @@ public sealed class ResendEmailService : IEmailService
     ];
 
     private readonly HttpClient _httpClient;
-    private readonly ResendSettings _settings;
-    private readonly ILogger<ResendEmailService> _logger;
+    private readonly BrevoSettings _settings;
+    private readonly ILogger<BrevoEmailService> _logger;
 
-    public ResendEmailService(
+    public BrevoEmailService(
         HttpClient httpClient,
-        IOptions<ResendSettings> options,
-        ILogger<ResendEmailService> logger)
+        IOptions<BrevoSettings> options,
+        ILogger<BrevoEmailService> logger)
     {
         _httpClient = httpClient;
         _settings = options.Value;
@@ -72,6 +76,28 @@ public sealed class ResendEmailService : IEmailService
         return SendEmailAsync(
             student,
             "Enrollment application confirmation",
+            body,
+            cancellationToken);
+    }
+
+    public Task SendApprovalNotificationAsync(
+        Student student,
+        CancellationToken cancellationToken)
+    {
+        var body = string.Join(
+            Environment.NewLine,
+            $"Hello {student.FullName ?? student.StudentName},",
+            "",
+            "Your enrollment application has been approved.",
+            $"Course / Department: {student.Course}",
+            $"Student Number: {student.StudentNumber}",
+            $"Section: {student.Section}",
+            "",
+            "Please contact the Registrar if you have questions.");
+
+        return SendEmailAsync(
+            student,
+            "Enrollment application approved",
             body,
             cancellationToken);
     }
@@ -110,22 +136,22 @@ public sealed class ResendEmailService : IEmailService
         if (string.IsNullOrWhiteSpace(_settings.ApiKey))
         {
             var exception = new InvalidOperationException(
-                "Resend API key is missing. Configure Resend:ApiKey.");
+                "Brevo API key is missing. Configure Brevo:ApiKey.");
             _logger.LogError(
                 exception,
-                "Cannot send {EmailSubject} email for student {StudentNumber}: Resend API key is not configured.",
+                "Cannot send {EmailSubject} email for student {StudentNumber}: Brevo API key is not configured.",
                 subject,
                 student.StudentNumber);
             throw exception;
         }
 
-        if (string.IsNullOrWhiteSpace(_settings.From))
+        if (string.IsNullOrWhiteSpace(_settings.FromEmail))
         {
             var exception = new InvalidOperationException(
-                "Resend sender address is missing. Configure Resend:From with a verified sender address.");
+                "Brevo sender address is missing. Configure Brevo:FromEmail with a verified sender address.");
             _logger.LogError(
                 exception,
-                "Cannot send {EmailSubject} email for student {StudentNumber}: Resend sender address is not configured.",
+                "Cannot send {EmailSubject} email for student {StudentNumber}: Brevo sender address is not configured.",
                 subject,
                 student.StudentNumber);
             throw exception;
@@ -144,17 +170,16 @@ public sealed class ResendEmailService : IEmailService
         }
 
         _logger.LogInformation(
-            "Sending {EmailSubject} email via Resend for student {StudentNumber} to {Recipient}.",
+            "Sending {EmailSubject} email via Brevo for student {StudentNumber} to {Recipient}.",
             subject,
             student.StudentNumber,
             student.Email);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "emails");
-        request.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
-        request.Content = JsonContent.Create(new ResendEmailRequest(
-            _settings.From,
-            student.Email,
+        using var request = new HttpRequestMessage(HttpMethod.Post, "smtp/email");
+        request.Headers.TryAddWithoutValidation("api-key", _settings.ApiKey);
+        request.Content = JsonContent.Create(new BrevoEmailRequest(
+            new BrevoSender(_settings.FromName, _settings.FromEmail),
+            [new BrevoRecipient(student.Email)],
             subject,
             text));
 
@@ -170,7 +195,7 @@ public sealed class ResendEmailService : IEmailService
         {
             _logger.LogError(
                 exception,
-                "Resend request failed for {EmailSubject} email for student {StudentNumber} to {Recipient}.",
+                "Brevo request failed for {EmailSubject} email for student {StudentNumber} to {Recipient}.",
                 subject,
                 student.StudentNumber,
                 student.Email);
@@ -183,12 +208,12 @@ public sealed class ResendEmailService : IEmailService
             {
                 var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 var exception = new HttpRequestException(
-                    $"Resend API returned {(int)response.StatusCode} ({response.StatusCode}).",
+                    $"Brevo API returned {(int)response.StatusCode} ({response.StatusCode}).",
                     inner: null,
                     response.StatusCode);
                 _logger.LogError(
                     exception,
-                    "Resend rejected {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}. Response: {ResponseBody}",
+                    "Brevo rejected {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}. Response: {ResponseBody}",
                     subject,
                     student.StudentNumber,
                     student.Email,
@@ -198,7 +223,7 @@ public sealed class ResendEmailService : IEmailService
             }
 
             _logger.LogInformation(
-                "Resend accepted {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}.",
+                "Brevo accepted {EmailSubject} email for student {StudentNumber} to {Recipient}. Status: {StatusCode}.",
                 subject,
                 student.StudentNumber,
                 student.Email,
@@ -206,9 +231,13 @@ public sealed class ResendEmailService : IEmailService
         }
     }
 
-    private sealed record ResendEmailRequest(
-        string From,
-        string To,
+    private sealed record BrevoEmailRequest(
+        BrevoSender Sender,
+        IReadOnlyList<BrevoRecipient> To,
         string Subject,
-        string Text);
+        string TextContent);
+
+    private sealed record BrevoSender(string Name, string Email);
+
+    private sealed record BrevoRecipient(string Email);
 }
