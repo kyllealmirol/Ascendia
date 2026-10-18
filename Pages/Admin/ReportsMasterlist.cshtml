@@ -262,6 +262,14 @@
                         body: new FormData(form),
                         headers: { "X-Requested-With": "XMLHttpRequest" }
                     });
+                    if (response.status === 400) {
+                        const errorResult = await response.json().catch(() => null);
+                        if (errorResult?.refreshRequired) {
+                            window.location.reload();
+                            return;
+                        }
+                    }
+
                     const result = await response.json();
                     if (!response.ok || result.success !== true || result.deleted !== true) {
                         throw new Error(result.message || "Hindi na-delete ang student application.");

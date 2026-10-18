@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Ascendia.Data;
 using Ascendia.Services;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +13,27 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=smartenroll.db"));
 builder.Services.AddScoped<StudentNumberService>();
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+var hasConfiguredDataProtectionKeysPath = !string.IsNullOrWhiteSpace(dataProtectionKeysPath);
+if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    dataProtectionKeysPath = Path.Combine(
+        builder.Environment.ContentRootPath,
+        "App_Data",
+        "DataProtection-Keys");
+}
+else if (!Path.IsPathRooted(dataProtectionKeysPath))
+{
+    dataProtectionKeysPath = Path.Combine(
+        builder.Environment.ContentRootPath,
+        dataProtectionKeysPath);
+}
+
+Directory.CreateDirectory(dataProtectionKeysPath);
+builder.Services.AddDataProtection()
+    .SetApplicationName("Ascendia")
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+
 builder.Services.Configure<SmtpSettings>(
     builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.PostConfigure<SmtpSettings>(settings =>
@@ -80,6 +104,12 @@ builder.Services.AddRazorPages(options =>
 
 var app = builder.Build();
 
+if (!hasConfiguredDataProtectionKeysPath && !app.Environment.IsDevelopment())
+{
+    app.Logger.LogWarning(
+        "DataProtection:KeysPath is not configured. Set it to a Railway persistent volume mount path so antiforgery keys survive redeployments.");
+}
+
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -145,6 +175,44 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (AntiforgeryValidationException exception)
+    {
+        app.Logger.LogWarning(
+            exception,
+            "Rejected a request with an invalid or expired antiforgery token: {Path}",
+            context.Request.Path);
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        if (string.Equals(
+                context.Request.Headers["X-Requested-With"],
+                "XMLHttpRequest",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                refreshRequired = true,
+                message = "Your session expired. Refresh the page and try again."
+            }));
+            return;
+        }
+
+        var returnUrl = context.Request.PathBase
+            + context.Request.Path
+            + context.Request.QueryString;
+        context.Response.Redirect(returnUrl);
+    }
+});
 
 app.UseHttpsRedirection();
 app.Use(async (context, next) =>
