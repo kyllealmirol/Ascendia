@@ -71,12 +71,12 @@
                             <th>Submitted Requirements</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="masterlistTableBody">
                         @if (Model.Masterlist != null && Model.Masterlist.Any())
                         {
                             @foreach (var item in Model.Masterlist)
                             {
-                                <tr>
+                                <tr id="student-row-@item.DatabaseId">
                                     <td>@(string.IsNullOrWhiteSpace(item.StudentId) ? "Not assigned" : item.StudentId)</td>
                                     <td>@item.FullName</td>
                                     <td>
@@ -91,7 +91,7 @@
                                         <span class="badge bg-secondary d-none d-print-inline">@item.Status</span>
                                         @if (!string.IsNullOrWhiteSpace(item.StudentId))
                                         {
-                                            <form method="post" asp-page-handler="UpdateStatus" class="d-flex flex-wrap align-items-center gap-2 status-edit-controls">
+                                            <form method="post" asp-page-handler="UpdateStatus" data-row-id="student-row-@item.DatabaseId" class="d-flex flex-wrap align-items-center gap-2 status-edit-controls">
                                                 <input type="hidden" name="studentNumber" value="@item.StudentId" />
                                                 <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
                                                 <input type="hidden" name="searchTerm" value="@Model.SearchTerm" />
@@ -242,6 +242,57 @@
 
 @section Scripts {
     <script>
+        document.querySelectorAll("form.status-edit-controls").forEach((form) => {
+            form.addEventListener("submit", async (event) => {
+                const selectedStatus = form.querySelector('select[name="newStatus"]');
+                if (selectedStatus?.value !== "Rejected") {
+                    return;
+                }
+
+                event.preventDefault();
+                const submitButton = form.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: "POST",
+                        body: new FormData(form),
+                        headers: { "X-Requested-With": "XMLHttpRequest" }
+                    });
+                    const result = await response.json();
+                    if (!response.ok || result.success !== true || result.deleted !== true) {
+                        throw new Error(result.message || "Hindi na-delete ang student application.");
+                    }
+
+                    document.getElementById(form.dataset.rowId)?.remove();
+                    const tableBody = document.getElementById("masterlistTableBody");
+                    if (tableBody && !tableBody.querySelector("tr[id^='student-row-']")) {
+                        tableBody.innerHTML =
+                            '<tr><td colspan="5" class="text-center py-4 text-muted">Walang student records na tumutugma sa napiling filter.</td></tr>';
+                    }
+
+                    const alert = document.createElement("div");
+                    alert.className = "alert alert-success alert-dismissible fade show";
+                    alert.setAttribute("role", "alert");
+                    alert.textContent = result.message;
+                    const closeButton = document.createElement("button");
+                    closeButton.type = "button";
+                    closeButton.className = "btn-close";
+                    closeButton.setAttribute("data-bs-dismiss", "alert");
+                    closeButton.setAttribute("aria-label", "Close");
+                    alert.append(closeButton);
+                    document.querySelector(".container.mt-4")?.prepend(alert);
+                } catch (error) {
+                    window.alert(error.message || "Nagkaroon ng error sa pag-delete ng application.");
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                    }
+                }
+            });
+        });
+
         document.querySelectorAll(".requirement-upload-trigger").forEach((button) => {
             button.addEventListener("click", () => {
                 document.getElementById("requirementsStudentId").value = button.dataset.studentId;

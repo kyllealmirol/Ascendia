@@ -199,6 +199,23 @@ namespace Ascendia.Pages.Admin
                 return RedirectToPage(new { SelectedCategory = selectedCategory, SearchTerm = searchTerm });
             }
 
+            if (string.Equals(newStatus, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                var relatedRequests = await _context.AcademicRequests
+                    .Where(request => request.StudentId == student.Id)
+                    .ToListAsync(cancellationToken);
+                _context.AcademicRequests.RemoveRange(relatedRequests);
+                _context.Students.Remove(student);
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return new JsonResult(new
+                {
+                    success = true,
+                    deleted = true,
+                    message = "Student application rejected and permanently removed."
+                });
+            }
+
             student.Status = newStatus;
             await _context.SaveChangesAsync(cancellationToken);
 
