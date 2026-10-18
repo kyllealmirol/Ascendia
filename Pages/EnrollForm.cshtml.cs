@@ -73,19 +73,17 @@ namespace Ascendia.Pages
         [TempData]
         public string? SuccessMessage { get; set; }
 
-        public async Task OnGetAsync(string? course)
+        public async Task OnGetAsync(string? course = null)
         {
             Student ??= new Student();
-            SelectedCourseCode = course?.Trim();
-            if (string.IsNullOrWhiteSpace(SelectedCourseCode))
+            SelectedCourseCode = string.IsNullOrWhiteSpace(course) ? null : course.Trim();
+            if (SelectedCourseCode is not null)
             {
-                return;
-            }
-
-            await LoadSelectedCourseAsync();
-            if (SelectedCourse is not null)
-            {
-                ApplySelectedCourse();
+                await LoadSelectedCourseAsync();
+                if (SelectedCourse is not null)
+                {
+                    ApplySelectedCourse();
+                }
             }
 
             Student.StudentNumber = await _studentNumberService.GenerateUniqueAsync(
