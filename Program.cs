@@ -14,13 +14,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=smartenroll.db"));
 builder.Services.AddScoped<StudentNumberService>();
 var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
-var hasConfiguredDataProtectionKeysPath = !string.IsNullOrWhiteSpace(dataProtectionKeysPath);
 if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
 {
-    dataProtectionKeysPath = Path.Combine(
-        builder.Environment.ContentRootPath,
-        "App_Data",
-        "DataProtection-Keys");
+    dataProtectionKeysPath = builder.Environment.IsDevelopment()
+        ? Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys")
+        : "/data/dp-keys";
 }
 else if (!Path.IsPathRooted(dataProtectionKeysPath))
 {
@@ -104,10 +102,11 @@ builder.Services.AddRazorPages(options =>
 
 var app = builder.Build();
 
-if (!hasConfiguredDataProtectionKeysPath && !app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
-    app.Logger.LogWarning(
-        "DataProtection:KeysPath is not configured. Set it to a Railway persistent volume mount path so antiforgery keys survive redeployments.");
+    app.Logger.LogInformation(
+        "Data Protection keys are stored at {DataProtectionKeysPath}. Mount a Railway persistent volume at /data to preserve keys across container redeployments.",
+        dataProtectionKeysPath);
 }
 
 await using (var scope = app.Services.CreateAsyncScope())
