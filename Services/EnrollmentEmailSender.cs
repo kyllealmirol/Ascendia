@@ -8,7 +8,7 @@ namespace Ascendia.Services;
 
 public sealed class SmtpSettings
 {
-    public string Host { get; set; } = string.Empty;
+    public string Host { get; set; } = "smtp.gmail.com";
     public int Port { get; set; } = 587;
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
@@ -49,14 +49,7 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
         Student student,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Host)
-            || _settings.Port is < 1 or > 65535
-            || string.IsNullOrWhiteSpace(_settings.Email)
-            || string.IsNullOrWhiteSpace(_settings.Password))
-        {
-            throw new InvalidOperationException(
-                "SMTP settings are incomplete. Configure SmtpSettings:Host, Port, Email, and Password.");
-        }
+        ValidateSmtpSettings();
 
         if (string.IsNullOrWhiteSpace(student.Email))
         {
@@ -105,14 +98,7 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
         string? rejectionReason,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.Host)
-            || _settings.Port is < 1 or > 65535
-            || string.IsNullOrWhiteSpace(_settings.Email)
-            || string.IsNullOrWhiteSpace(_settings.Password))
-        {
-            throw new InvalidOperationException(
-                "SMTP settings are incomplete. Configure SmtpSettings:Host, Port, Email, and Password.");
-        }
+        ValidateSmtpSettings();
 
         if (string.IsNullOrWhiteSpace(student.Email))
         {
@@ -151,5 +137,21 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
         };
 
         await client.SendMailAsync(message, cancellationToken);
+    }
+
+    private void ValidateSmtpSettings()
+    {
+        if (_settings.Port is < 1 or > 65535)
+        {
+            throw new SmtpException(
+                $"Invalid SMTP port {_settings.Port}. Configure SmtpSettings:Port with a value between 1 and 65535.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_settings.Email)
+            || string.IsNullOrWhiteSpace(_settings.Password))
+        {
+            throw new SmtpException(
+                "SMTP sender credentials are missing. Configure SmtpSettings:Email and SmtpSettings:Password, or set EMAIL_USER and EMAIL_PASS environment variables.");
+        }
     }
 }

@@ -12,6 +12,41 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<StudentNumberService>();
 builder.Services.Configure<SmtpSettings>(
     builder.Configuration.GetSection("SmtpSettings"));
+builder.Services.PostConfigure<SmtpSettings>(settings =>
+{
+    settings.Host = FirstConfiguredValue(
+        builder.Configuration["SmtpSettings:Host"],
+        builder.Configuration["EmailSettings:Host"],
+        settings.Host)
+        ?? "smtp.gmail.com";
+
+    if (int.TryParse(
+            FirstConfiguredValue(
+                builder.Configuration["SmtpSettings:Port"],
+                builder.Configuration["EmailSettings:Port"]),
+            out var configuredPort))
+    {
+        settings.Port = configuredPort;
+    }
+
+    settings.Email = FirstConfiguredValue(
+        builder.Configuration["SmtpSettings:Email"],
+        builder.Configuration["SmtpSettings:SenderEmail"],
+        builder.Configuration["EmailSettings:Email"],
+        builder.Configuration["EmailSettings:SenderEmail"],
+        builder.Configuration["EMAIL_USER"],
+        settings.Email)
+        ?? string.Empty;
+
+    settings.Password = FirstConfiguredValue(
+        builder.Configuration["SmtpSettings:Password"],
+        builder.Configuration["SmtpSettings:SenderPassword"],
+        builder.Configuration["EmailSettings:Password"],
+        builder.Configuration["EmailSettings:SenderPassword"],
+        builder.Configuration["EMAIL_PASS"],
+        settings.Password)
+        ?? string.Empty;
+});
 builder.Services.AddTransient<IEnrollmentEmailSender, EnrollmentEmailSender>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -133,3 +168,8 @@ app.UseAuthorization();
 app.MapRazorPages();
 
 app.Run();
+
+static string? FirstConfiguredValue(params string?[] values)
+{
+    return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+}
