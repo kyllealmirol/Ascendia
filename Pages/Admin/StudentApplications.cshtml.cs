@@ -15,19 +15,13 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
-        private readonly ILogger<StudentApplicationsModel> _logger;
 
         public StudentApplicationsModel(
             AppDbContext context,
-            IWebHostEnvironment environment,
-            EnrollmentEmailQueue enrollmentEmailQueue,
-            ILogger<StudentApplicationsModel> logger)
+            IWebHostEnvironment environment)
         {
             _context = context;
             _environment = environment;
-            _enrollmentEmailQueue = enrollmentEmailQueue;
-            _logger = logger;
         }
 
         public IList<Student> StudentsList { get; set; } = default!;
@@ -79,7 +73,6 @@ namespace Ascendia.Pages.Admin
 
         public async Task<IActionResult> OnPostRejectAsync(
             int id,
-            string? rejectionReason,
             CancellationToken cancellationToken)
         {
             if (id <= 0)
@@ -94,7 +87,6 @@ namespace Ascendia.Pages.Admin
                 return NotFound();
             }
 
-            var studentForNotification = application;
             var relatedRequests = await _context.AcademicRequests
                 .Where(request => request.StudentId == application.Id)
                 .ToListAsync(cancellationToken);
@@ -102,21 +94,12 @@ namespace Ascendia.Pages.Admin
             _context.Students.Remove(application);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var emailQueued = _enrollmentEmailQueue.TryQueueRejection(
-                studentForNotification,
-                rejectionReason);
-            if (!emailQueued)
+            return new JsonResult(new
             {
-                _logger.LogError(
-                    "Student application {StudentId} was deleted, but the email queue is full; no rejection email was queued for {Email}.",
-                    id,
-                    studentForNotification.Email);
-            }
-
-            TempData["SuccessMessage"] = emailQueued
-                ? "Matagumpay na na-delete ang enrollment application. Naka-queue ang rejection email."
-                : "Matagumpay na na-delete ang enrollment application, pero hindi na-queue ang rejection email.";
-            return RedirectToPage();
+                success = true,
+                deleted = true,
+                message = "Student application rejected and permanently removed."
+            });
         }
 
         public async Task<IActionResult> OnGetDocumentAsync(
