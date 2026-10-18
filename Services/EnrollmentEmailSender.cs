@@ -90,7 +90,7 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
             Credentials = new NetworkCredential(_settings.Email, _settings.Password)
         };
 
-        await client.SendMailAsync(message, cancellationToken);
+        await SendEmailAsync(client, message, cancellationToken);
     }
 
     public async Task SendRejectionNotificationAsync(
@@ -136,7 +136,30 @@ public sealed class EnrollmentEmailSender : IEnrollmentEmailSender
             Credentials = new NetworkCredential(_settings.Email, _settings.Password)
         };
 
-        await client.SendMailAsync(message, cancellationToken);
+        await SendEmailAsync(client, message, cancellationToken);
+    }
+
+    private static async Task SendEmailAsync(
+        SmtpClient client,
+        MailMessage message,
+        CancellationToken cancellationToken)
+    {
+        Console.WriteLine(
+            $"[SMTP] Sending email. Host: {client.Host}, Port: {client.Port}, SSL: {client.EnableSsl}, To: {string.Join(", ", message.To.Select(address => address.Address))}, Subject: {message.Subject}");
+
+        try
+        {
+            await client.SendMailAsync(message, cancellationToken);
+            Console.WriteLine(
+                $"[SMTP] Email sent successfully. Host: {client.Host}, Port: {client.Port}, To: {string.Join(", ", message.To.Select(address => address.Address))}, Subject: {message.Subject}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"[SMTP FULL ERROR]: {ex.GetType().FullName} - {ex.Message} | Inner: {ex.InnerException?.Message}");
+            Console.WriteLine($"[SMTP FULL EXCEPTION DETAILS]: {ex}");
+            throw;
+        }
     }
 
     private void ValidateSmtpSettings()
