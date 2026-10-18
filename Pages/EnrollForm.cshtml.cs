@@ -73,16 +73,29 @@ namespace Ascendia.Pages
         [TempData]
         public string? SuccessMessage { get; set; }
 
-        public async Task OnGetAsync(string? course = null)
+        public async Task OnGetAsync([FromQuery(Name = "course")] string? course = null)
         {
             Student ??= new Student();
             SelectedCourseCode = string.IsNullOrWhiteSpace(course) ? null : course.Trim();
-            if (SelectedCourseCode is not null)
+            if (SelectedCourseCode is { Length: > 32 })
+            {
+                SelectedCourseCode = null;
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Hindi valid ang napiling kurso. Pumili ng kurso mula sa listahan.");
+            }
+            else if (SelectedCourseCode is not null)
             {
                 await LoadSelectedCourseAsync();
                 if (SelectedCourse is not null)
                 {
                     ApplySelectedCourse();
+                }
+                else
+                {
+                    ModelState.AddModelError(
+                        string.Empty,
+                        "Hindi na available ang napiling kurso. Pumili ng kasalukuyang available na kurso.");
                 }
             }
 
@@ -337,10 +350,17 @@ namespace Ascendia.Pages
 
         private async Task LoadSelectedCourseAsync()
         {
+            if (string.IsNullOrWhiteSpace(SelectedCourseCode))
+            {
+                SelectedCourse = null;
+                return;
+            }
+
+            var normalizedCourseCode = SelectedCourseCode.Trim().ToUpperInvariant();
             SelectedCourse = await _dbContext.Courses
                 .AsNoTracking()
                 .SingleOrDefaultAsync(
-                    course => course.CourseCode.ToUpper() == SelectedCourseCode!.ToUpper(),
+                    course => course.CourseCode.ToUpper() == normalizedCourseCode,
                     HttpContext.RequestAborted);
         }
 
