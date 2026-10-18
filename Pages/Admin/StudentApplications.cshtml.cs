@@ -106,6 +106,13 @@ namespace Ascendia.Pages.Admin
                     "Application {StudentId} was deleted, but its rejection email could not be queued.",
                     id);
             }
+            else
+            {
+                _logger.LogInformation(
+                    "Queued rejection email for deleted application {StudentId} to {Email}.",
+                    id,
+                    application.Email);
+            }
 
             return new JsonResult(new
             {

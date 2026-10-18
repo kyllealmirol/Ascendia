@@ -333,6 +333,10 @@ namespace Ascendia.Pages
 
             if (_enrollmentEmailQueue.TryQueueConfirmation(Student))
             {
+                _logger.LogInformation(
+                    "Queued enrollment confirmation email for student {StudentNumber} to {Email}.",
+                    assignedStudentNumber,
+                    Student.Email);
                 SuccessMessage =
                     $"Enrollment application submitted successfully. Your student number is {assignedStudentNumber}. A confirmation email has been queued for {Student.Email}.";
             }

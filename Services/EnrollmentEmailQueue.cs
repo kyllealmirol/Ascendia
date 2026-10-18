@@ -88,10 +88,16 @@ public sealed class EnrollmentEmailWorker : BackgroundService
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var emailSender = scope.ServiceProvider
-                        .GetRequiredService<IEnrollmentEmailSender>();
+                        .GetRequiredService<IEmailService>();
                     using var sendTimeout = CancellationTokenSource
                         .CreateLinkedTokenSource(stoppingToken);
                     sendTimeout.CancelAfter(TimeSpan.FromSeconds(30));
+
+                    _logger.LogInformation(
+                        "Processing queued {EmailType} email for student {StudentNumber} to {Email}.",
+                        job.Type,
+                        job.Student.StudentNumber,
+                        job.Student.Email);
 
                     if (job.Type == EnrollmentEmailType.Confirmation)
                     {
