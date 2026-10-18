@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.EntityFrameworkCore;
 using Ascendia.Data;
 using Ascendia.Services;
@@ -195,6 +196,24 @@ app.Use(async (context, next) =>
     }
 
     await next();
+});
+var noticeUploadsPath = builder.Configuration["NoticeUploads:Path"];
+if (string.IsNullOrWhiteSpace(noticeUploadsPath))
+{
+    noticeUploadsPath = app.Environment.IsDevelopment()
+        ? Path.Combine(app.Environment.ContentRootPath, "App_Data", "uploads", "notices")
+        : "/data/uploads/notices";
+}
+else if (!Path.IsPathRooted(noticeUploadsPath))
+{
+    noticeUploadsPath = Path.Combine(app.Environment.ContentRootPath, noticeUploadsPath);
+}
+
+Directory.CreateDirectory(noticeUploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(noticeUploadsPath),
+    RequestPath = "/notice-images"
 });
 app.UseStaticFiles();
 

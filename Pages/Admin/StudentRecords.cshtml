@@ -1,0 +1,113 @@
+@page
+@model Ascendia.Pages.Admin.StudentRecordsModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Student Records Directory";
+}
+
+<div class="container my-4">
+    <h2>Student Records Directory</h2>
+    <p class="text-muted">Search, filter, and review student records and enrollment totals.</p>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Enrolled students per course</div>
+        <div class="card-body">
+            <form method="get" class="row g-2 mb-3">
+                <div class="col-md-5">
+                    <select asp-for="GraphYearAndSemester" asp-items="Model.YearOptions" class="form-select">
+                        <option value="">All years and semesters</option>
+                    </select>
+                </div>
+                <div class="col-auto"><button class="btn btn-outline-primary">Filter Chart</button></div>
+            </form>
+            <canvas id="enrollment-chart" aria-label="Enrolled student count per course"></canvas>
+        </div>
+    </div>
+
+    @if (Model.Details is not null)
+    {
+        <div class="card mb-4">
+            <div class="card-header fw-bold">Student record details</div>
+            <div class="card-body row">
+                <div class="col-md-8">
+                    <dl class="row">
+                        <dt class="col-sm-4">Full name</dt><dd class="col-sm-8">@(Model.Details.FullName ?? Model.Details.StudentName)</dd>
+                        <dt class="col-sm-4">Student number</dt><dd class="col-sm-8">@Model.Details.StudentNumber</dd>
+                        <dt class="col-sm-4">Email / Phone</dt><dd class="col-sm-8">@Model.Details.Email / @Model.Details.Phone</dd>
+                        <dt class="col-sm-4">Course / Section</dt><dd class="col-sm-8">@(Model.Details.AcademicCourse?.CourseCode ?? Model.Details.CourseCode ?? Model.Details.Course) / @Model.Details.Section</dd>
+                        <dt class="col-sm-4">Status / Student type</dt><dd class="col-sm-8">@Model.Details.Status / @Model.Details.StudentType</dd>
+                        <dt class="col-sm-4">Year &amp; semester</dt><dd class="col-sm-8">@Model.Details.YearAndSemester</dd>
+                        <dt class="col-sm-4">Birth date / Gender</dt><dd class="col-sm-8">@Model.Details.BirthDate.ToString("d") / @Model.Details.Gender</dd>
+                        <dt class="col-sm-4">Address</dt><dd class="col-sm-8">@Model.Details.Address</dd>
+                        <dt class="col-sm-4">Remaining balance</dt><dd class="col-sm-8">@Model.Details.RemainingBalance</dd>
+                    </dl>
+                </div>
+                @if (Model.Details.ProfilePicturePath is not null)
+                {
+                    <div class="col-md-4"><img src="@Model.Details.ProfilePicturePath" class="img-fluid rounded" alt="Student profile" /></div>
+                }
+            </div>
+        </div>
+    }
+
+    <form method="get" class="card card-body mb-3">
+        <div class="row g-2">
+            <div class="col-md-3"><input name="Search" value="@Model.Search" class="form-control" placeholder="Name or student number" /></div>
+            <div class="col-md-2">
+                <select asp-for="CourseFilter" asp-items="Model.CourseOptions" class="form-select"><option value="">All courses</option></select>
+            </div>
+            <div class="col-md-2">
+                <select asp-for="StatusFilter" asp-items="Model.StatusOptions" class="form-select"><option value="">All statuses</option></select>
+            </div>
+            <div class="col-md-2">
+                <select asp-for="SectionFilter" asp-items="Model.SectionOptions" class="form-select"><option value="">All sections</option></select>
+            </div>
+            <div class="col-md-2">
+                <select asp-for="YearFilter" asp-items="Model.YearOptions" class="form-select"><option value="">All years/semesters</option></select>
+            </div>
+            <div class="col-md-1"><button class="btn btn-primary w-100">Go</button></div>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead><tr><th>Student number</th><th>Name</th><th>Course</th><th>Section</th><th>Year &amp; semester</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var student in Model.Students)
+            {
+                <tr>
+                    <td>@student.StudentNumber</td>
+                    <td>@(student.FullName ?? student.StudentName)</td>
+                    <td>@(student.AcademicCourse?.CourseCode ?? student.CourseCode ?? student.Course)</td>
+                    <td>@student.Section</td>
+                    <td>@student.YearAndSemester</td>
+                    <td>@student.Status</td>
+                    <td><a asp-page="./StudentRecords" asp-route-detailsId="@student.Id" class="btn btn-sm btn-outline-primary">Details</a></td>
+                </tr>
+            }
+            @if (Model.Students.Count == 0) { <tr><td colspan="7" class="text-center">No matching records.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+    <nav aria-label="Student records pages">
+        <ul class="pagination">
+            <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")"><a class="page-link" asp-page="./StudentRecords" asp-all-route-data="@(new Dictionary<string,string?> { ["Search"] = Model.Search, ["CourseFilter"] = Model.CourseFilter, ["StatusFilter"] = Model.StatusFilter, ["SectionFilter"] = Model.SectionFilter, ["YearFilter"] = Model.YearFilter, ["GraphYearAndSemester"] = Model.GraphYearAndSemester, ["PageNumber"] = (Model.PageNumber - 1).ToString() })">Previous</a></li>
+            <li class="page-item disabled"><span class="page-link">Page @Model.PageNumber of @Model.TotalPages (@Model.TotalCount records)</span></li>
+            <li class="page-item @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")"><a class="page-link" asp-page="./StudentRecords" asp-all-route-data="@(new Dictionary<string,string?> { ["Search"] = Model.Search, ["CourseFilter"] = Model.CourseFilter, ["StatusFilter"] = Model.StatusFilter, ["SectionFilter"] = Model.SectionFilter, ["YearFilter"] = Model.YearFilter, ["GraphYearAndSemester"] = Model.GraphYearAndSemester, ["PageNumber"] = (Model.PageNumber + 1).ToString() })">Next</a></li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    new Chart(document.getElementById("enrollment-chart"), {
+        type: "bar",
+        data: {
+            labels: @Html.Raw(JsonSerializer.Serialize(Model.ChartLabels)),
+            datasets: [{ label: "Enrolled students", data: @Html.Raw(JsonSerializer.Serialize(Model.ChartValues)), backgroundColor: "#198754" }]
+        },
+        options: { responsive: true, maintainAspectRatio: true }
+    });
+</script>
+}

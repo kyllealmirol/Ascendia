@@ -16,12 +16,22 @@ namespace Ascendia.Pages
         }
 
         public List<AcademicCourse> Courses { get; private set; } = new();
+        public List<SchoolNotice> Notices { get; private set; } = new();
 
         public async Task OnGetAsync()
         {
             Courses = await _dbContext.Courses
                 .AsNoTracking()
                 .OrderBy(course => course.CourseCode)
+                .ToListAsync(HttpContext.RequestAborted);
+
+            var todayUtc = DateTime.UtcNow.Date;
+            Notices = await _dbContext.Notices
+                .AsNoTracking()
+                .Where(notice => notice.IsActive
+                    && (!notice.ExpiryDateUtc.HasValue || notice.ExpiryDateUtc >= todayUtc))
+                .OrderByDescending(notice => notice.IsPinned)
+                .ThenByDescending(notice => notice.DatePostedUtc)
                 .ToListAsync(HttpContext.RequestAborted);
         }
     }

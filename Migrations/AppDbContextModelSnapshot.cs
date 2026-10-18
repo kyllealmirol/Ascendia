@@ -162,6 +162,173 @@ namespace Ascendia.Migrations
                     b.ToTable("AcademicRequests");
                 });
 
+            modelBuilder.Entity("Ascendia.Models.Instructor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Instructors");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Department = "Computer Engineering",
+                            Email = "instructor@example.edu",
+                            FullName = "Sample Instructor",
+                            Status = "Active"
+                        });
+                });
+
+            modelBuilder.Entity("Ascendia.Models.SchoolNotice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DatePostedUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiryDateUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ImagePath")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Notices");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Category = "Enrollment Schedule",
+                            DatePostedUtc = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            IsPinned = true,
+                            Message = "Please review the available programs and submit your application online.",
+                            Title = "Enrollment is open"
+                        });
+                });
+
+            modelBuilder.Entity("Ascendia.Models.ShiftingCreditingApplication", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApplicationType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreditedSubjects")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentCourse")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DesiredCourseCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviousSchool")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Remarks")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("StudentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("StudentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StudentNumber")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("ShiftingCreditingApplications");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            ApplicationType = "Subject Evaluation",
+                            CreditedSubjects = "Introduction to Computing\nProgramming Fundamentals",
+                            CurrentCourse = "BS Information Technology",
+                            PreviousSchool = "Sample College",
+                            Status = "For Evaluation",
+                            StudentName = "Sample Student",
+                            StudentNumber = "DEMO-0001",
+                            SubmittedAtUtc = new DateTime(2026, 1, 2, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
+                });
+
             modelBuilder.Entity("Ascendia.Models.Student", b =>
                 {
                     b.Property<int>("Id")
@@ -257,6 +424,91 @@ namespace Ascendia.Migrations
                     b.ToTable("Students");
                 });
 
+            modelBuilder.Entity("Ascendia.Models.SubjectSection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CourseCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("InstructorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Room")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Schedule")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SectionName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Semester")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Units")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("YearLevel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstructorId");
+
+                    b.HasIndex("CourseCode", "SubjectCode", "SectionName", "YearLevel", "Semester")
+                        .IsUnique();
+
+                    b.ToTable("SubjectSections");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CourseCode = "BSCpE",
+                            InstructorId = 1,
+                            SectionName = "4A",
+                            Semester = "1st Sem",
+                            SubjectCode = "CPE 411",
+                            SubjectName = "Engineering Management",
+                            Units = 3,
+                            YearLevel = "4th Year"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CourseCode = "BSIT",
+                            SectionName = "3B",
+                            Semester = "1st Sem",
+                            SubjectCode = "IT 301",
+                            SubjectName = "Information Assurance and Security",
+                            Units = 3,
+                            YearLevel = "3rd Year"
+                        });
+                });
+
             modelBuilder.Entity("Ascendia.Models.AcademicRequest", b =>
                 {
                     b.HasOne("Ascendia.Models.Student", "Student")
@@ -264,6 +516,16 @@ namespace Ascendia.Migrations
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("Ascendia.Models.ShiftingCreditingApplication", b =>
+                {
+                    b.HasOne("Ascendia.Models.Student", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Student");
                 });
@@ -276,6 +538,21 @@ namespace Ascendia.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("AcademicCourse");
+                });
+
+            modelBuilder.Entity("Ascendia.Models.SubjectSection", b =>
+                {
+                    b.HasOne("Ascendia.Models.Instructor", "Instructor")
+                        .WithMany("SubjectSections")
+                        .HasForeignKey("InstructorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Instructor");
+                });
+
+            modelBuilder.Entity("Ascendia.Models.Instructor", b =>
+                {
+                    b.Navigation("SubjectSections");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,0 +1,137 @@
+@page
+@model Ascendia.Pages.Admin.NoticesModel
+@{
+    ViewData["Title"] = "School Notices & Bulletins";
+    var editing = Model.EditingNotice is not null;
+}
+
+<div class="container my-4">
+    <h2>School Notices &amp; Portal Bulletins</h2>
+    <p class="text-muted">Create, update, pin, and publish notices or image announcements.</p>
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">@(editing ? "Edit Notice" : "Create Notice")</div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" asp-page-handler="@(editing ? "Update" : "Create")" asp-route-id="@(Model.EditingNotice?.Id)">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="NoticeForm.Title" class="form-label">Title</label>
+                        <input asp-for="NoticeForm.Title" class="form-control" maxlength="200" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NoticeForm.Category" class="form-label">Category</label>
+                        <select asp-for="NoticeForm.Category" class="form-select">
+                            @foreach (var category in Model.CategoryOptions) { <option value="@category">@category</option> }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="NoticeForm.Message" class="form-label">Message</label>
+                        <textarea asp-for="NoticeForm.Message" class="form-control" rows="4"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NoticeImage" class="form-label">Announcement image (JPG, PNG, WEBP; max 5 MB)</label>
+                        <input asp-for="NoticeImage" type="file" class="form-control" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" id="notice-image-input" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NoticeForm.ExpiryDateUtc" class="form-label">Expiry date (optional)</label>
+                        <input asp-for="NoticeForm.ExpiryDateUtc" type="date" class="form-control" />
+                    </div>
+                    @if (Model.EditingNotice?.ImagePath is string currentImage)
+                    {
+                        <div class="col-12">
+                            <p class="mb-2">Current / preview:</p>
+                            <img id="notice-image-preview" src="@currentImage" alt="Current announcement" class="img-thumbnail" style="max-width: min(100%, 520px); max-height: 320px; object-fit: contain;" />
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" name="removeImage" value="true" id="removeNoticeImage" />
+                                <label class="form-check-label" for="removeNoticeImage">Remove current image</label>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-12">
+                            <img id="notice-image-preview" alt="Selected image preview" class="img-thumbnail d-none" style="max-width: min(100%, 520px); max-height: 320px; object-fit: contain;" />
+                        </div>
+                    }
+                    <div class="col-md-6 form-check ms-2">
+                        <input asp-for="NoticeForm.IsPinned" class="form-check-input" />
+                        <label asp-for="NoticeForm.IsPinned" class="form-check-label">Pinned</label>
+                    </div>
+                    @if (editing)
+                    {
+                        <div class="col-md-6 form-check">
+                            <input asp-for="NoticeForm.IsActive" class="form-check-input" />
+                            <label asp-for="NoticeForm.IsActive" class="form-check-label">Active</label>
+                        </div>
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="NoticeForm.IsActive" value="true" />
+                    }
+                    <div class="col-12 d-flex gap-2">
+                        <button class="btn btn-primary">@(editing ? "Save Changes" : "Publish Notice")</button>
+                        @if (editing) { <a asp-page="./Notices" class="btn btn-outline-secondary">Cancel</a> }
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        @foreach (var notice in Model.Notices)
+        {
+            var alertClass = notice.Category == "Alert" ? "border-danger" : "border-secondary";
+            <div class="col-md-6">
+                <article class="card h-100 @alertClass">
+                    @if (notice.ImagePath is not null)
+                    {
+                        <img src="@notice.ImagePath" alt="@notice.Title" class="card-img-top notice-gallery-image" style="max-height: 320px; object-fit: contain; cursor: zoom-in;" data-full-image="@notice.ImagePath" />
+                    }
+                    <div class="card-body">
+                        <span class="badge @(notice.Category == "Alert" ? "bg-danger" : "bg-primary")">@notice.Category</span>
+                        @if (notice.IsPinned) { <span class="badge bg-warning text-dark">Pinned</span> }
+                        <span class="badge @(notice.IsActive ? "bg-success" : "bg-secondary")">@(notice.IsActive ? "Active" : "Inactive")</span>
+                        <h5 class="card-title mt-2">@notice.Title</h5>
+                        <p class="card-text">@notice.Message</p>
+                        <small class="text-muted">Posted @notice.DatePostedUtc.ToLocalTime().ToString("g") · Expires @(notice.ExpiryDateUtc?.ToString("d") ?? "Never")</small>
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <a asp-page="./Notices" asp-route-id="@notice.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                        <form method="post" asp-page-handler="Delete" asp-route-id="@notice.Id" onsubmit="return confirm('Delete this notice?');">
+                            <button class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </div>
+                </article>
+            </div>
+        }
+        @if (Model.Notices.Count == 0) { <div class="col-12"><p class="text-muted">No notices yet.</p></div> }
+    </div>
+</div>
+
+<div class="modal fade" id="noticeImageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-dark">
+            <button type="button" class="btn-close btn-close-white ms-auto m-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            <img id="notice-modal-image" alt="Announcement image" class="img-fluid mx-auto" style="max-height: 85vh; object-fit: contain;" />
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const noticeInput = document.getElementById("notice-image-input");
+    const noticePreview = document.getElementById("notice-image-preview");
+    noticeInput?.addEventListener("change", () => {
+        const file = noticeInput.files?.[0];
+        if (!file || !noticePreview) return;
+        noticePreview.src = URL.createObjectURL(file);
+        noticePreview.classList.remove("d-none");
+    });
+    document.querySelectorAll(".notice-gallery-image").forEach(image => image.addEventListener("click", () => {
+        document.getElementById("notice-modal-image").src = image.dataset.fullImage;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("noticeImageModal")).show();
+    }));
+</script>
+}

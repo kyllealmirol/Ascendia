@@ -1,0 +1,69 @@
+@page
+@model Ascendia.Pages.Admin.FacultyManagementModel
+@{
+    ViewData["Title"] = "Faculty & Instructor Management";
+    var editing = Model.EditingInstructor is not null;
+}
+
+<div class="container my-4">
+    <h2>Faculty &amp; Instructor Management</h2>
+    <p class="text-muted">Manage instructors and monitor assigned subjects, sections, and units.</p>
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">@(editing ? "Edit Instructor" : "Add Instructor")</div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="@(editing ? "Update" : "Create")" asp-route-id="@Model.EditingInstructor?.Id" class="row g-3">
+                <div class="col-md-3"><label asp-for="InstructorForm.FullName" class="form-label">Full name</label><input asp-for="InstructorForm.FullName" class="form-control" required /></div>
+                <div class="col-md-3"><label asp-for="InstructorForm.Department" class="form-label">Department</label><input asp-for="InstructorForm.Department" class="form-control" required /></div>
+                <div class="col-md-3"><label asp-for="InstructorForm.Email" class="form-label">Email</label><input asp-for="InstructorForm.Email" type="email" class="form-control" required /></div>
+                <div class="col-md-2">
+                    <label asp-for="InstructorForm.Status" class="form-label">Status</label>
+                    <select asp-for="InstructorForm.Status" class="form-select"><option>Active</option><option>Inactive</option></select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary">Save</button></div>
+                @if (editing) { <div class="col-12"><a asp-page="./FacultyManagement">Cancel edit</a></div> }
+            </form>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4>Teaching loads</h4>
+        <a asp-page="./SubjectsSections" class="btn btn-outline-primary">Assign subjects &amp; sections</a>
+    </div>
+    @foreach (var instructor in Model.Instructors)
+    {
+        var sectionCount = instructor.SubjectSections.Count;
+        var unitCount = instructor.SubjectSections.Sum(section => section.Units);
+        <section class="card mb-3">
+            <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+                <div><strong>@instructor.FullName</strong> <span class="badge @(instructor.Status == "Active" ? "bg-success" : "bg-secondary")">@instructor.Status</span><br /><small>@instructor.Department · @instructor.Email</small></div>
+                <div class="text-end"><span class="badge bg-primary">@sectionCount sections</span> <span class="badge bg-info text-dark">@unitCount units</span></div>
+            </div>
+            <div class="card-body">
+                @if (sectionCount == 0) { <p class="text-muted mb-0">No subject assignments.</p> }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0"><thead><tr><th>Course</th><th>Subject</th><th>Section</th><th>Year/Semester</th><th>Units</th></tr></thead>
+                            <tbody>
+                            @foreach (var assignedSection in instructor.SubjectSections.OrderBy(item => item.CourseCode).ThenBy(item => item.SubjectCode))
+                            {
+                                <tr><td>@assignedSection.CourseCode</td><td>@assignedSection.SubjectCode — @assignedSection.SubjectName</td><td>@assignedSection.SectionName</td><td>@assignedSection.YearLevel / @assignedSection.Semester</td><td>@assignedSection.Units</td></tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a asp-page="./FacultyManagement" asp-route-id="@instructor.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                <form method="post" asp-page-handler="Delete" asp-route-id="@instructor.Id" onsubmit="return confirm('Delete this instructor? Existing subject assignments will remain unassigned.');">
+                    <button class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+            </div>
+        </section>
+    }
+    @if (Model.Instructors.Count == 0) { <p class="text-muted">No instructors have been added.</p> }
+</div>

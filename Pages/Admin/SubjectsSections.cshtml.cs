@@ -27,7 +27,7 @@ namespace Ascendia.Pages.Admin
         }
 
         [BindProperty]
-        public SubjectSectionViewModel NewSubject { get; set; } = new();
+        public SubjectSection NewSubject { get; set; } = new();
 
         [BindProperty(SupportsGet = true)]
         public string? SelectedCourseCode { get; set; }
@@ -41,13 +41,9 @@ namespace Ascendia.Pages.Admin
         public List<SelectListItem> CourseOptions { get; set; } = new();
         public List<SelectListItem> YearLevelOptions { get; set; } = new();
         public List<SelectListItem> SemesterOptions { get; set; } = new();
+        public List<SelectListItem> ActiveInstructorOptions { get; set; } = new();
 
-        public List<SubjectSectionViewModel> SubjectsList { get; set; } =
-        [
-            new() { Id = 1, SubjectCode = "CPE 411", SubjectName = "Engineering Management", SectionName = "4A", Units = 3, CourseCode = "BSCpE", YearLevel = "4th Year", Semester = "1st Sem" },
-            new() { Id = 2, SubjectCode = "CPE 412", SubjectName = "Embedded Systems", SectionName = "4A", Units = 3, CourseCode = "BSCpE", YearLevel = "4th Year", Semester = "1st Sem" },
-            new() { Id = 3, SubjectCode = "IT 301", SubjectName = "Information Assurance and Security", SectionName = "3B", Units = 3, CourseCode = "BSIT", YearLevel = "3rd Year", Semester = "1st Sem" }
-        ];
+        public List<SubjectSection> SubjectsList { get; set; } = [];
 
         public List<StudentSectionViewModel> StudentSections { get; set; } = new();
 
@@ -72,29 +68,84 @@ namespace Ascendia.Pages.Admin
                 ModelState.AddModelError(string.Empty, "Maglagay ng valid na course, year, semester, at units.");
             }
 
+            if (NewSubject.InstructorId.HasValue
+                && !await _context.Instructors.AnyAsync(
+                    instructor => instructor.Id == NewSubject.InstructorId.Value
+                        && instructor.Status == "Active",
+                    cancellationToken))
+            {
+                ModelState.AddModelError(
+                    nameof(NewSubject.InstructorId),
+                    "Active instructors lamang ang maaaring italaga.");
+            }
+
+            NewSubject.CourseCode = NewSubject.CourseCode?.Trim() ?? string.Empty;
+            NewSubject.SubjectCode = NewSubject.SubjectCode?.Trim() ?? string.Empty;
+            NewSubject.SubjectName = NewSubject.SubjectName?.Trim() ?? string.Empty;
+            NewSubject.SectionName = NewSubject.SectionName?.Trim() ?? string.Empty;
+            var duplicate = await _context.SubjectSections.AnyAsync(section =>
+                section.CourseCode == NewSubject.CourseCode
+                && section.SubjectCode == NewSubject.SubjectCode
+                && section.SectionName == NewSubject.SectionName
+                && section.YearLevel == NewSubject.YearLevel
+                && section.Semester == NewSubject.Semester,
+                cancellationToken);
+            if (duplicate)
+            {
+                ModelState.AddModelError(string.Empty, "May existing subject record na para sa course, section, year, at semester na ito.");
+            }
+
             if (!ModelState.IsValid)
             {
                 await LoadPageDataAsync(cancellationToken);
                 return Page();
             }
 
-            NewSubject.Id = SubjectsList.Count > 0 ? SubjectsList.Max(subject => subject.Id) + 1 : 1;
-            SubjectsList.Add(NewSubject);
+            _context.SubjectSections.Add(NewSubject);
+            await _context.SaveChangesAsync(cancellationToken);
 
             TempData["SuccessMessage"] = "Matagumpay na naidagdag ang bagong subject at section!";
             return RedirectToPage(FilterRouteValues());
         }
 
-        public IActionResult OnPostDelete(int id)
+        public async Task<IActionResult> OnPostDeleteAsync(int id, CancellationToken cancellationToken)
         {
-            var itemToRemove = SubjectsList.FirstOrDefault(subject => subject.Id == id);
+            var itemToRemove = await _context.SubjectSections.FindAsync([id], cancellationToken);
             if (itemToRemove is not null)
             {
-                SubjectsList.Remove(itemToRemove);
+                _context.SubjectSections.Remove(itemToRemove);
+                await _context.SaveChangesAsync(cancellationToken);
                 TempData["SuccessMessage"] = "Matagumpay na natanggal ang record.";
             }
 
             NormalizeFilters();
+            return RedirectToPage(FilterRouteValues());
+        }
+
+        public async Task<IActionResult> OnPostAssignInstructorAsync(
+            int id,
+            int? instructorId,
+            CancellationToken cancellationToken)
+        {
+            var subject = await _context.SubjectSections.FindAsync([id], cancellationToken);
+            if (subject is null)
+            {
+                return NotFound();
+            }
+
+            if (instructorId.HasValue
+                && !await _context.Instructors.AnyAsync(
+                    instructor => instructor.Id == instructorId.Value
+                        && instructor.Status == "Active",
+                    cancellationToken))
+            {
+                TempData["ErrorMessage"] = "Active instructors lamang ang maaaring italaga.";
+                return RedirectToPage(FilterRouteValues());
+            }
+
+            subject.InstructorId = instructorId;
+            await _context.SaveChangesAsync(cancellationToken);
+            TempData["SuccessMessage"] = "Na-update ang instructor assignment.";
             return RedirectToPage(FilterRouteValues());
         }
 
@@ -167,10 +218,36 @@ namespace Ascendia.Pages.Admin
                 .ToList();
             YearLevelOptions = YearLevels.Select(year => new SelectListItem(year, year)).ToList();
             SemesterOptions = Semesters.Select(semester => new SelectListItem(semester, semester)).ToList();
+            ActiveInstructorOptions = await _context.Instructors
+                .AsNoTracking()
+                .Where(instructor => instructor.Status == "Active")
+                .OrderBy(instructor => instructor.FullName)
+                .Select(instructor => new SelectListItem(
+                    instructor.FullName + " — " + instructor.Department,
+                    instructor.Id.ToString()))
+                .ToListAsync(cancellationToken);
 
-            SubjectsList = SubjectsList
-                .Where(subject => MatchesFilters(subject.CourseCode, subject.YearLevel, subject.Semester))
-                .ToList();
+            var subjects = _context.SubjectSections.AsNoTracking()
+                .Include(subject => subject.Instructor)
+                .AsQueryable();
+            if (!string.IsNullOrWhiteSpace(SelectedCourseCode))
+            {
+                subjects = subjects.Where(subject => subject.CourseCode == SelectedCourseCode);
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedYearLevel))
+            {
+                subjects = subjects.Where(subject => subject.YearLevel == SelectedYearLevel);
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedSemester))
+            {
+                subjects = subjects.Where(subject => subject.Semester == SelectedSemester);
+            }
+
+            SubjectsList = await subjects.OrderBy(subject => subject.CourseCode)
+                .ThenBy(subject => subject.SubjectCode)
+                .ToListAsync(cancellationToken);
 
             var students = await _context.Students
                 .AsNoTracking()
@@ -269,18 +346,6 @@ namespace Ascendia.Pages.Admin
                 SelectedSemester
             };
         }
-    }
-
-    public class SubjectSectionViewModel
-    {
-        public int Id { get; set; }
-        public string SubjectCode { get; set; } = string.Empty;
-        public string SubjectName { get; set; } = string.Empty;
-        public string SectionName { get; set; } = string.Empty;
-        public int Units { get; set; }
-        public string CourseCode { get; set; } = string.Empty;
-        public string YearLevel { get; set; } = string.Empty;
-        public string Semester { get; set; } = string.Empty;
     }
 
     public class StudentSectionViewModel

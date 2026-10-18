@@ -95,6 +95,20 @@
                         <option value="">Sem</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label asp-for="NewSubject.InstructorId" class="form-label">Active instructor</label>
+                    <select asp-for="NewSubject.InstructorId" asp-items="Model.ActiveInstructorOptions" class="form-select">
+                        <option value="">Unassigned</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewSubject.Schedule" class="form-label">Schedule</label>
+                    <input asp-for="NewSubject.Schedule" class="form-control" placeholder="e.g. MWF 8:00-9:00" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="NewSubject.Room" class="form-label">Room</label>
+                    <input asp-for="NewSubject.Room" class="form-control" />
+                </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-success w-100">Add Record</button>
                 </div>
@@ -117,6 +131,8 @@
                             <th>Year & Semester</th>
                             <th>Section</th>
                             <th>Units</th>
+                            <th>Instructor</th>
+                            <th>Schedule / Room</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -134,6 +150,22 @@
                                     <td><span class="badge bg-info text-dark">@item.SectionName</span></td>
                                     <td>@item.Units</td>
                                     <td>
+                                        <form method="post" asp-page-handler="AssignInstructor" asp-route-id="@item.Id" class="d-flex gap-1">
+                                            <input type="hidden" asp-for="SelectedCourseCode" />
+                                            <input type="hidden" asp-for="SelectedYearLevel" />
+                                            <input type="hidden" asp-for="SelectedSemester" />
+                                            <select name="instructorId" class="form-select form-select-sm">
+                                                <option value="">Unassigned</option>
+                                                @foreach (var instructor in Model.ActiveInstructorOptions)
+                                                {
+                                                    <option value="@instructor.Value" selected="@(item.InstructorId?.ToString() == instructor.Value ? "selected" : null)">@instructor.Text</option>
+                                                }
+                                            </select>
+                                            <button class="btn btn-sm btn-outline-primary">Assign</button>
+                                        </form>
+                                    </td>
+                                    <td>@item.Schedule<br />@item.Room</td>
+                                    <td>
                                         <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline">
                                             <input type="hidden" asp-for="SelectedCourseCode" />
                                             <input type="hidden" asp-for="SelectedYearLevel" />
@@ -147,7 +179,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">Walang pang nakatalang subject o section para sa filters na ito.</td>
+                                <td colspan="10" class="text-center py-4 text-muted">Walang pang nakatalang subject o section para sa filters na ito.</td>
                             </tr>
                         }
                     </tbody>

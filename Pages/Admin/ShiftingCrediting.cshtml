@@ -1,0 +1,94 @@
+@page
+@model Ascendia.Pages.Admin.ShiftingCreditingModel
+@{
+    ViewData["Title"] = "Shifting & Crediting Evaluation";
+}
+
+<div class="container my-4">
+    <h2>Shifting &amp; Crediting Evaluation</h2>
+    <p class="text-muted">Review course shifting, credit transfer, and subject evaluation applications.</p>
+    @if (TempData["SuccessMessage"] is string success) { <div class="alert alert-success">@success</div> }
+    @if (!ModelState.IsValid) { <div asp-validation-summary="All" class="alert alert-danger"></div> }
+
+    <div class="card mb-4">
+        <div class="card-header fw-bold">Add Evaluation Application</div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="Create" class="row g-3">
+                <div class="col-md-5">
+                    <label asp-for="NewApplication.StudentNumber" class="form-label">Student</label>
+                    <select asp-for="NewApplication.StudentNumber" asp-items="Model.Students" class="form-select" required>
+                        <option value="">Choose student...</option>
+                    </select>
+                    <span asp-validation-for="NewApplication.StudentNumber" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="NewApplication.ApplicationType" class="form-label">Application type</label>
+                    <select asp-for="NewApplication.ApplicationType" class="form-select" required>
+                        @foreach (var type in Model.ApplicationTypeOptions) { <option value="@type">@type</option> }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="NewApplication.DesiredCourseCode" class="form-label">Desired course (shifting)</label>
+                    <select asp-for="NewApplication.DesiredCourseCode" asp-items="Model.Courses" class="form-select">
+                        <option value="">Not applicable</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NewApplication.PreviousSchool" class="form-label">Previous school</label>
+                    <input asp-for="NewApplication.PreviousSchool" class="form-control" maxlength="200" />
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NewApplication.CreditedSubjects" class="form-label">Subjects for credit (one per line)</label>
+                    <textarea asp-for="NewApplication.CreditedSubjects" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="NewApplication.CreditedSubjects" class="text-danger"></span>
+                </div>
+                <div class="col-12"><button class="btn btn-primary">Add Application</button></div>
+            </form>
+        </div>
+    </div>
+
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <select name="TypeFilter" class="form-select">
+                <option value="">All application types</option>
+                @foreach (var type in Model.ApplicationTypeOptions) { <option selected="@(Model.TypeFilter == type ? "selected" : null)" value="@type">@type</option> }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select name="StatusFilter" class="form-select">
+                <option value="">All statuses</option>
+                @foreach (var status in Model.StatusOptions) { <option selected="@(Model.StatusFilter == status ? "selected" : null)" value="@status">@status</option> }
+            </select>
+        </div>
+        <div class="col-md-4"><button class="btn btn-outline-primary">Filter</button></div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead><tr><th>Student</th><th>Type</th><th>Courses / Transfer</th><th>Subjects</th><th>Filed</th><th>Status &amp; evaluation</th></tr></thead>
+            <tbody>
+            @foreach (var item in Model.Applications)
+            {
+                <tr>
+                    <td>@item.StudentName<br /><small>@item.StudentNumber</small></td>
+                    <td>@item.ApplicationType</td>
+                    <td>Current: @item.CurrentCourse<br />Desired: @item.DesiredCourseCode<br />Previous school: @item.PreviousSchool</td>
+                    <td><pre class="mb-0">@item.CreditedSubjects</pre></td>
+                    <td>@item.SubmittedAtUtc.ToLocalTime().ToString("g")<br /><small>Reviewed: @(item.ReviewedAtUtc?.ToLocalTime().ToString("g") ?? "—")</small></td>
+                    <td>
+                        <form method="post" asp-page-handler="Evaluate" class="d-grid gap-2">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <select name="status" class="form-select form-select-sm">
+                                @foreach (var status in Model.StatusOptions) { <option selected="@(item.Status == status ? "selected" : null)" value="@status">@status</option> }
+                            </select>
+                            <textarea name="remarks" class="form-control form-control-sm" rows="2" placeholder="Registrar remarks">@item.Remarks</textarea>
+                            <button class="btn btn-sm btn-success">Save Evaluation</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (Model.Applications.Count == 0) { <tr><td colspan="6" class="text-center">No applications found.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</div>
