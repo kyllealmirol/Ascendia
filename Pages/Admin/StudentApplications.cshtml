@@ -106,11 +106,13 @@
                                                 <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                             </form>
 
-                                            <!-- Reject Trigger Button -->
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal@(student.Id)">
-                                                Reject
-                                            </button>
-
+                                            <form method="post"
+                                                  asp-page-handler="Reject"
+                                                  asp-route-id="@student.Id"
+                                                  data-row-id="student-application-row-@student.Id"
+                                                  class="d-inline reject-application-form">
+                                                <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+                                            </form>
                                         }
                                     </td>
                                 </tr>
@@ -125,35 +127,6 @@
                     </tbody>
                 </table>
             </div>
-
-            @if (Model.StudentsList is not null)
-            {
-                @foreach (var student in Model.StudentsList.Where(student => !string.IsNullOrWhiteSpace(student.StudentNumber)))
-                {
-                    <div class="modal fade" id="rejectModal@(student.Id)" tabindex="-1" aria-labelledby="rejectModalLabel@(student.Id)" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                            <form method="post"
-                                  asp-page-handler="Reject"
-                                  asp-route-id="@student.Id"
-                                  data-row-id="student-application-row-@student.Id"
-                                  class="modal-content reject-application-form">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="rejectModalLabel@(student.Id)">Reject Application - @(student.FullName ?? student.StudentName)</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p class="mb-0">Ang pag-reject ay permanenteng magde-delete sa enrollment application at hindi na ito maibabalik. Magpatuloy?</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-danger">Confirm Reject</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                }
-            }
         </div>
     </div>
 
@@ -174,26 +147,33 @@
                             body: new FormData(form),
                             headers: { "X-Requested-With": "XMLHttpRequest" }
                         });
+                        if (response.status === 400) {
+                            const errorResult = await response.json().catch(() => null);
+                            if (errorResult?.refreshRequired) {
+                                window.location.reload();
+                                return;
+                            }
+                        }
+
                         const result = await response.json();
                         if (!response.ok || result.success !== true || result.deleted !== true) {
                             throw new Error(result.message || "Hindi na-delete ang student application.");
                         }
 
-                        const modal = form.closest(".modal");
-                        const modalInstance = modal && bootstrap.Modal.getInstance(modal);
-                        if (modalInstance) {
-                            modal.addEventListener("hidden.bs.modal", () => modal.remove(), { once: true });
-                            modalInstance.hide();
-                        } else {
-                            modal?.remove();
+                        const row = document.getElementById(form.dataset.rowId);
+                        if (row) {
+                            row.style.transition = "opacity 250ms ease";
+                            row.style.opacity = "0";
+                            window.setTimeout(() => row.remove(), 250);
                         }
 
-                        document.getElementById(form.dataset.rowId)?.remove();
                         const tableBody = document.getElementById("studentApplicationsTableBody");
-                        if (tableBody && !tableBody.querySelector("tr[id^='student-application-row-']")) {
-                            tableBody.innerHTML =
-                                '<tr id="student-applications-empty-row"><td colspan="8" class="text-center py-4 text-muted">Walang kasalukuyang pending na aplikasyon.</td></tr>';
-                        }
+                        window.setTimeout(() => {
+                            if (tableBody && !tableBody.querySelector("tr[id^='student-application-row-']")) {
+                                tableBody.innerHTML =
+                                    '<tr id="student-applications-empty-row"><td colspan="8" class="text-center py-4 text-muted">Walang kasalukuyang pending na aplikasyon.</td></tr>';
+                            }
+                        }, 260);
 
                         const alert = document.createElement("div");
                         alert.className = "alert alert-success alert-dismissible fade show";
