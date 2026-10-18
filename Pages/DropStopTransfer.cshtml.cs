@@ -55,8 +55,11 @@ namespace Ascendia.Pages
         [TempData]
         public string? SuccessMessage { get; set; }
 
-        public void OnGet()
+        public List<SchoolNotice> Notices { get; private set; } = [];
+
+        public async Task OnGetAsync(CancellationToken cancellationToken)
         {
+            await LoadNoticesAsync(cancellationToken);
         }
 
         public async Task<IActionResult> OnPostAsync(CancellationToken cancellationToken)
@@ -64,6 +67,7 @@ namespace Ascendia.Pages
             if (TransferRequest is null)
             {
                 ModelState.AddModelError(string.Empty, "Hindi valid ang request form.");
+                await LoadNoticesAsync(cancellationToken);
                 return Page();
             }
 
@@ -85,6 +89,7 @@ namespace Ascendia.Pages
 
             if (!ModelState.IsValid)
             {
+                await LoadNoticesAsync(cancellationToken);
                 return Page();
             }
 
@@ -100,6 +105,7 @@ namespace Ascendia.Pages
                 ModelState.AddModelError(
                     "TransferRequest.StudentNumber",
                     "Hindi makita ang enrolled student gamit ang student number na ito.");
+                await LoadNoticesAsync(cancellationToken);
                 return Page();
             }
 
@@ -110,6 +116,7 @@ namespace Ascendia.Pages
                 ModelState.AddModelError(
                     "TransferRequest.StudentName",
                     "Hindi tugma ang pangalan sa student record.");
+                await LoadNoticesAsync(cancellationToken);
                 return Page();
             }
 
@@ -133,6 +140,18 @@ namespace Ascendia.Pages
 
             SuccessMessage = $"Your {academicRequest.RequestType} request has been submitted to the Registrar.";
             return RedirectToPage();
+        }
+
+        private async Task LoadNoticesAsync(CancellationToken cancellationToken)
+        {
+            var todayUtc = DateTime.UtcNow.Date;
+            Notices = await _dbContext.Notices
+                .AsNoTracking()
+                .Where(notice => notice.IsActive
+                    && (!notice.ExpiryDateUtc.HasValue || notice.ExpiryDateUtc >= todayUtc))
+                .OrderByDescending(notice => notice.IsPinned)
+                .ThenByDescending(notice => notice.DatePostedUtc)
+                .ToListAsync(cancellationToken);
         }
     }
 

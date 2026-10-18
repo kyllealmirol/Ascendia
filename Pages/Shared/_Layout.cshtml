@@ -32,16 +32,31 @@
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
+                        @{
+                            var currentPath = Context.Request.Path.Value?.TrimEnd('/');
+                            if (string.IsNullOrEmpty(currentPath))
+                            {
+                                currentPath = "/";
+                            }
+                            var isRegistrarPage = string.Equals(currentPath, "/AdminDashboard", StringComparison.OrdinalIgnoreCase)
+                                || currentPath.StartsWith("/Admin/", StringComparison.OrdinalIgnoreCase)
+                                || currentPath.StartsWith("/Registrar/", StringComparison.OrdinalIgnoreCase);
+                        }
                         <li class="nav-item">
-                            <a class="nav-link @(Context.Request.Path == "/" ? "active" : "")" aria-current="@(Context.Request.Path == "/" ? "page" : null)" asp-area="" asp-page="/Index">Home</a>
+                            <a class="nav-link @(currentPath == "/" ? "active" : "")" aria-current="@(currentPath == "/" ? "page" : null)" asp-area="" asp-page="/Index">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link @(Context.Request.Path == "/AboutUs" ? "active" : "")" aria-current="@(Context.Request.Path == "/AboutUs" ? "page" : null)" asp-area="" asp-page="/AboutUs">About Us</a>
+                            <a class="nav-link @(string.Equals(currentPath, "/Enrollment", StringComparison.OrdinalIgnoreCase) ? "active" : "")" aria-current="@(string.Equals(currentPath, "/Enrollment", StringComparison.OrdinalIgnoreCase) ? "page" : null)" asp-area="" asp-page="/Enrollment">Enrollment</a>
                         </li>
-                        <!-- Registrar / Admin Link -->
                         <li class="nav-item">
-                            <a class="nav-link @(Context.Request.Path == "/AdminDashboard" ? "active" : "")" aria-current="@(Context.Request.Path == "/AdminDashboard" ? "page" : null)" asp-page="/AdminDashboard">Registrar Panel</a>
+                            <a class="nav-link @(string.Equals(currentPath, "/AboutUs", StringComparison.OrdinalIgnoreCase) ? "active" : "")" aria-current="@(string.Equals(currentPath, "/AboutUs", StringComparison.OrdinalIgnoreCase) ? "page" : null)" asp-area="" asp-page="/AboutUs">About Us</a>
                         </li>
+                        @if (User.IsInRole("Registrar"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(isRegistrarPage ? "active" : "")" aria-current="@(isRegistrarPage ? "page" : null)" asp-page="/AdminDashboard">Registrar Panel</a>
+                            </li>
+                        }
                     </ul>
 
                     <div class="site-nav-actions d-flex">

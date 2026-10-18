@@ -15,16 +15,10 @@ namespace Ascendia.Pages
             _dbContext = dbContext;
         }
 
-        public List<AcademicCourse> Courses { get; private set; } = new();
         public List<SchoolNotice> Notices { get; private set; } = new();
 
         public async Task OnGetAsync()
         {
-            Courses = await _dbContext.Courses
-                .AsNoTracking()
-                .OrderBy(course => course.CourseCode)
-                .ToListAsync(HttpContext.RequestAborted);
-
             var todayUtc = DateTime.UtcNow.Date;
             Notices = await _dbContext.Notices
                 .AsNoTracking()

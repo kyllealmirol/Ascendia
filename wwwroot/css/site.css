@@ -437,6 +437,54 @@ main .alert :is(h1, h2, h3, h4, h5, h6, p, label, small, li, a) {
   text-shadow: none;
 }
 
+.admin-dashboard-grid > [class*="col-"] {
+  display: flex;
+}
+
+.admin-dashboard-grid .card {
+  width: 100%;
+}
+
+.admin-dashboard-grid .card-body > .btn {
+  align-self: flex-start;
+}
+
+.home-hero {
+  padding: clamp(2rem, 6vw, 4rem) 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+}
+
+.bulletin-card-alert {
+  border: 2px solid #dc3545;
+}
+
+.bulletin-image-button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem;
+  border: 0;
+  border-radius: 0.85rem 0.85rem 0 0;
+  background: rgba(23, 23, 23, 0.06);
+  cursor: zoom-in;
+}
+
+.bulletin-image {
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  object-fit: contain;
+}
+
+.bulletin-modal-image {
+  display: block;
+  width: 100%;
+  max-height: 82vh;
+  object-fit: contain;
+}
+
 .about-us-panel {
   max-width: 960px;
   margin: clamp(2rem, 8vh, 5rem) auto;
