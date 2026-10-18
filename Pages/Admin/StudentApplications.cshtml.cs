@@ -68,25 +68,24 @@ namespace Ascendia.Pages.Admin
             return RedirectToPage();
         }
 
-        public async Task<IActionResult> OnPostRejectAsync(string? studentNumber, string rejectionReason)
+        public async Task<IActionResult> OnPostRejectAsync(int id)
         {
-            studentNumber = studentNumber?.Trim();
-            if (string.IsNullOrWhiteSpace(studentNumber))
+            if (id <= 0)
             {
                 return BadRequest();
             }
 
-            var student = await _context.Students
-                .SingleOrDefaultAsync(candidate => candidate.StudentNumber == studentNumber);
-            if (student == null)
+            var application = await _context.Students
+                .SingleOrDefaultAsync(candidate => candidate.Id == id);
+            if (application is null)
             {
                 return NotFound();
             }
 
-            student.Status = "Rejected";
+            _context.Students.Remove(application);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = $"Na-reject ang aplikasyon. Reason: {rejectionReason}";
+            TempData["SuccessMessage"] = "Matagumpay na na-delete ang enrollment application.";
             return RedirectToPage();
         }
 

@@ -112,7 +112,7 @@
                                             </button>
 
                                             <!-- Reject Modal -->
-                                            <form method="post" asp-page-handler="Reject" asp-route-studentNumber="@student.StudentNumber">
+                                            <form method="post" asp-page-handler="Reject" asp-route-id="@student.Id">
                                                 <div class="modal fade" id="rejectModal@(student.Id)" tabindex="-1" aria-hidden="true">
                                                     <div class="modal-dialog">
                                                         <div class="modal-content">
@@ -121,10 +121,7 @@
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                             </div>
                                                             <div class="modal-body">
-                                                                <div class="mb-3">
-                                                                    <label class="form-label">Reason / Remarks for Rejection:</label>
-                                                                    <textarea name="rejectionReason" class="form-control" rows="3" required placeholder="Maglagay ng dahilan kung bakit na-reject ang aplikasyon..."></textarea>
-                                                                </div>
+                                                                <p class="mb-0">Ang pag-reject ay permanenteng magde-delete sa enrollment application at hindi na ito maibabalik. Magpatuloy?</p>
                                                             </div>
                                                             <div class="modal-footer">
                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

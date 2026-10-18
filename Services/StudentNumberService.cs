@@ -115,7 +115,7 @@ public sealed class StudentNumberService
 
     private static string CreateCandidate()
     {
-        var yearPrefix = DateTime.Now.Year % 100;
+        var yearPrefix = PhilippineTime.Now.Year % 100;
         var randomDigits = RandomNumberGenerator.GetInt32(0, 1_000_000);
         return $"{yearPrefix:D2}0{randomDigits:D6}";
     }
