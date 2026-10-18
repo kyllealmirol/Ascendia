@@ -67,7 +67,6 @@
                 }
 
                 <form method="post" enctype="multipart/form-data">
-                    <input type="hidden" asp-for="SelectedCourseCode" />
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
                     <!-- Bilog na Profile Picture Upload sa taas -->
                     <div class="profile-pic-wrapper">
@@ -148,7 +147,22 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Course / Department</label>
-                        <input asp-for="Student.Course" class="form-control" readonly />
+                        @if (Model.SelectedCourse is not null)
+                        {
+                            <input type="hidden" asp-for="SelectedCourseCode" />
+                            <input asp-for="Student.Course" class="form-control" readonly />
+                        }
+                        else
+                        {
+                            <select asp-for="SelectedCourseCode" class="form-select" required>
+                                <option value="">Select Course / Department...</option>
+                                @foreach (var course in Model.AvailableCourses)
+                                {
+                                    <option value="@course.CourseCode">@course.CourseCode — @course.CourseName</option>
+                                }
+                            </select>
+                            <span asp-validation-for="SelectedCourseCode" class="text-danger"></span>
+                        }
                     </div>
                     @if (Model.SelectedCourse is not null)
                     {
