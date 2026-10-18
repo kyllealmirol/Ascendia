@@ -15,13 +15,19 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
+        private readonly ILogger<StudentApplicationsModel> _logger;
 
         public StudentApplicationsModel(
             AppDbContext context,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            EnrollmentEmailQueue enrollmentEmailQueue,
+            ILogger<StudentApplicationsModel> logger)
         {
             _context = context;
             _environment = environment;
+            _enrollmentEmailQueue = enrollmentEmailQueue;
+            _logger = logger;
         }
 
         public IList<Student> StudentsList { get; set; } = default!;
@@ -93,6 +99,13 @@ namespace Ascendia.Pages.Admin
             _context.AcademicRequests.RemoveRange(relatedRequests);
             _context.Students.Remove(application);
             await _context.SaveChangesAsync(cancellationToken);
+
+            if (!_enrollmentEmailQueue.TryQueueRejection(application, null))
+            {
+                _logger.LogError(
+                    "Application {StudentId} was deleted, but its rejection email could not be queued.",
+                    id);
+            }
 
             return new JsonResult(new
             {
