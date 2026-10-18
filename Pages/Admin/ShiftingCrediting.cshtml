@@ -15,36 +15,65 @@
         <div class="card-body">
             <form method="post" asp-page-handler="Create" class="row g-3">
                 <div class="col-md-5">
-                    <label asp-for="NewApplication.StudentNumber" class="form-label">Student</label>
-                    <select asp-for="NewApplication.StudentNumber" asp-items="Model.Students" class="form-select" required>
+                    <label asp-for="StudentId" class="form-label">Student</label>
+                    <select asp-for="StudentId" asp-items="Model.Students" class="form-select" required>
                         <option value="">Choose student...</option>
                     </select>
-                    <span asp-validation-for="NewApplication.StudentNumber" class="text-danger"></span>
+                    <span asp-validation-for="StudentId" class="text-danger"></span>
                 </div>
                 <div class="col-md-4">
                     <label asp-for="NewApplication.ApplicationType" class="form-label">Application type</label>
-                    <select asp-for="NewApplication.ApplicationType" class="form-select" required>
+                    <select asp-for="NewApplication.ApplicationType" class="form-select" id="application-type" required>
                         @foreach (var type in Model.ApplicationTypeOptions) { <option value="@type">@type</option> }
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-3 application-type-field" data-application-types="Course Shifting">
                     <label asp-for="NewApplication.DesiredCourseCode" class="form-label">Desired course (shifting)</label>
-                    <select asp-for="NewApplication.DesiredCourseCode" asp-items="Model.Courses" class="form-select">
-                        <option value="">Not applicable</option>
+                    <select asp-for="NewApplication.DesiredCourseCode" asp-items="Model.Courses" class="form-select" data-required-for-type="Course Shifting">
+                        <option value="">Choose desired course...</option>
                     </select>
+                    <span asp-validation-for="NewApplication.DesiredCourseCode" class="text-danger"></span>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 application-type-field" data-application-types="Credit Transfer">
                     <label asp-for="NewApplication.PreviousSchool" class="form-label">Previous school</label>
-                    <input asp-for="NewApplication.PreviousSchool" class="form-control" maxlength="200" />
+                    <input asp-for="NewApplication.PreviousSchool" class="form-control" maxlength="200" data-required-for-type="Credit Transfer" />
+                    <span asp-validation-for="NewApplication.PreviousSchool" class="text-danger"></span>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-6 application-type-field" data-application-types="Credit Transfer">
                     <label asp-for="NewApplication.CreditedSubjects" class="form-label">Subjects for credit (one per line)</label>
-                    <textarea asp-for="NewApplication.CreditedSubjects" class="form-control" rows="2"></textarea>
+                    <textarea asp-for="NewApplication.CreditedSubjects" class="form-control" rows="2" data-required-for-type="Credit Transfer"></textarea>
                     <span asp-validation-for="NewApplication.CreditedSubjects" class="text-danger"></span>
                 </div>
                 <div class="col-12"><button class="btn btn-primary">Add Application</button></div>
             </form>
         </div>
+
+        @section Scripts {
+            <script>
+                (() => {
+                    const typeSelect = document.getElementById("application-type");
+                    const fields = document.querySelectorAll(".application-type-field");
+
+                    function updateApplicationFields() {
+                        const selectedType = typeSelect.value;
+                        fields.forEach(field => {
+                            const isVisible = field.dataset.applicationTypes
+                                .split(",")
+                                .includes(selectedType);
+                            field.hidden = !isVisible;
+                            field.querySelectorAll("input, select, textarea").forEach(control => {
+                                control.disabled = !isVisible;
+                                control.required = isVisible
+                                    && control.dataset.requiredForType === selectedType;
+                            });
+                        });
+                    }
+
+                    typeSelect.addEventListener("change", updateApplicationFields);
+                    updateApplicationFields();
+                })();
+            </script>
+        }
     </div>
 
     <form method="get" class="row g-2 mb-3">

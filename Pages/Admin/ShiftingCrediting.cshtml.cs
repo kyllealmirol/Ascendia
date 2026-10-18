@@ -28,6 +28,9 @@ public sealed class ShiftingCreditingModel : PageModel
     [BindProperty]
     public ShiftingCreditingApplication NewApplication { get; set; } = new();
 
+    [BindProperty]
+    public int? StudentId { get; set; }
+
     [BindProperty(SupportsGet = true)]
     public string? TypeFilter { get; set; }
 
@@ -47,8 +50,9 @@ public sealed class ShiftingCreditingModel : PageModel
 
     public async Task<IActionResult> OnPostCreateAsync(CancellationToken cancellationToken)
     {
-        NewApplication.StudentNumber = NewApplication.StudentNumber.Trim();
-        NewApplication.ApplicationType = NewApplication.ApplicationType.Trim();
+        NewApplication.ApplicationType = NewApplication.ApplicationType?.Trim() ?? string.Empty;
+        NewApplication.DesiredCourseCode = NewApplication.DesiredCourseCode?.Trim();
+        NewApplication.PreviousSchool = NewApplication.PreviousSchool?.Trim();
         NewApplication.CreditedSubjects = CleanMultiline(NewApplication.CreditedSubjects);
         NewApplication.Remarks = CleanMultiline(NewApplication.Remarks);
 
@@ -57,51 +61,91 @@ public sealed class ShiftingCreditingModel : PageModel
             ModelState.AddModelError(nameof(NewApplication.ApplicationType), "Pumili ng valid na application type.");
         }
 
-        var student = await _context.Students.SingleOrDefaultAsync(
-            item => item.StudentNumber == NewApplication.StudentNumber,
-            cancellationToken);
+        var student = StudentId.HasValue
+            ? await _context.Students
+                .Include(item => item.AcademicCourse)
+                .SingleOrDefaultAsync(item => item.Id == StudentId.Value, cancellationToken)
+            : null;
         if (student is null)
         {
-            ModelState.AddModelError(nameof(NewApplication.StudentNumber), "Hindi makita ang estudyante.");
+            ModelState.AddModelError(nameof(StudentId), "Pumili ng valid na estudyante.");
+        }
+        else
+        {
+            NewApplication.StudentId = student.Id;
+            NewApplication.StudentNumber = student.StudentNumber ?? string.Empty;
+            NewApplication.StudentName = student.FullName ?? student.StudentName ?? string.Empty;
+            NewApplication.CurrentCourse = student.AcademicCourse?.CourseName
+                ?? student.Course
+                ?? student.CourseCode
+                ?? string.Empty;
+
+            ModelState.Remove("NewApplication.StudentName");
+            ModelState.Remove("NewApplication.StudentNumber");
+            ModelState.Remove("NewApplication.CurrentCourse");
         }
 
         AcademicCourse? desiredCourse = null;
-        if (string.Equals(NewApplication.ApplicationType, "Course Shifting", StringComparison.Ordinal)
-            && !string.IsNullOrWhiteSpace(NewApplication.DesiredCourseCode))
+        if (NewApplication.ApplicationType == "Course Shifting")
         {
-            var normalizedCode = NewApplication.DesiredCourseCode.Trim().ToUpperInvariant();
-            desiredCourse = await _context.Courses.AsNoTracking().SingleOrDefaultAsync(
-                course => course.CourseCode.ToUpper() == normalizedCode,
-                cancellationToken);
-            if (desiredCourse is null)
+            if (string.IsNullOrWhiteSpace(NewApplication.DesiredCourseCode))
             {
-                ModelState.AddModelError(nameof(NewApplication.DesiredCourseCode), "Pumili ng available na kurso.");
+                ModelState.AddModelError(
+                    "NewApplication.DesiredCourseCode",
+                    "Pumili ng desired course para sa course shifting.");
+            }
+            else
+            {
+                var normalizedCode = NewApplication.DesiredCourseCode.ToUpperInvariant();
+                desiredCourse = await _context.Courses.AsNoTracking().SingleOrDefaultAsync(
+                    course => course.CourseCode.ToUpper() == normalizedCode,
+                    cancellationToken);
+                if (desiredCourse is null)
+                {
+                    ModelState.AddModelError(
+                        "NewApplication.DesiredCourseCode",
+                        "Pumili ng available na kurso.");
+                }
             }
         }
 
-        if (string.Equals(NewApplication.ApplicationType, "Credit Transfer", StringComparison.Ordinal)
-            && string.IsNullOrWhiteSpace(NewApplication.CreditedSubjects))
+        if (NewApplication.ApplicationType == "Credit Transfer")
         {
-            ModelState.AddModelError(nameof(NewApplication.CreditedSubjects), "Ilagay ang mga subject na ipapa-credit.");
+            if (string.IsNullOrWhiteSpace(NewApplication.PreviousSchool))
+            {
+                ModelState.AddModelError(
+                    "NewApplication.PreviousSchool",
+                    "Ilagay ang pangalan ng previous school para sa credit transfer.");
+            }
+
+            if (string.IsNullOrWhiteSpace(NewApplication.CreditedSubjects))
+            {
+                ModelState.AddModelError(
+                    "NewApplication.CreditedSubjects",
+                    "Ilagay ang mga subject na ipapa-credit.");
+            }
         }
 
         if (!ModelState.IsValid)
         {
+            LogModelStateErrors();
             await LoadPageAsync(cancellationToken);
             return Page();
         }
 
-        NewApplication.StudentId = student!.Id;
-        NewApplication.StudentName = student.FullName ?? student.StudentName ?? string.Empty;
-        NewApplication.CurrentCourse = student.Course ?? student.CourseCode;
         NewApplication.DesiredCourseCode = desiredCourse?.CourseCode;
         NewApplication.Status = "Pending";
         NewApplication.SubmittedAtUtc = DateTime.UtcNow;
         _context.ShiftingCreditingApplications.Add(NewApplication);
         await _context.SaveChangesAsync(cancellationToken);
 
+        _logger.LogInformation(
+            "Created {ApplicationType} application {ApplicationId} for student {StudentNumber}.",
+            NewApplication.ApplicationType,
+            NewApplication.Id,
+            NewApplication.StudentNumber);
         TempData["SuccessMessage"] = "Naidagdag ang evaluation application.";
-        return RedirectToPage(new { TypeFilter, StatusFilter });
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostEvaluateAsync(
@@ -184,7 +228,7 @@ public sealed class ShiftingCreditingModel : PageModel
             .OrderBy(item => item.StudentNumber)
             .Select(item => new SelectListItem(
                 (item.StudentNumber ?? "No number") + " — " + (item.FullName ?? item.StudentName ?? "Student"),
-                item.StudentNumber ?? string.Empty))
+                item.Id.ToString()))
             .ToListAsync(cancellationToken);
         Courses = await _context.Courses.AsNoTracking()
             .OrderBy(item => item.CourseCode)
@@ -194,4 +238,20 @@ public sealed class ShiftingCreditingModel : PageModel
 
     private static string? CleanMultiline(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private void LogModelStateErrors()
+    {
+        foreach (var entry in ModelState.Where(entry => entry.Value?.Errors.Count > 0))
+        {
+            foreach (var error in entry.Value!.Errors)
+            {
+                _logger.LogWarning(
+                    "Shifting/credit application validation failed for {Field}: {Error}",
+                    entry.Key,
+                    string.IsNullOrWhiteSpace(error.ErrorMessage)
+                        ? error.Exception?.Message
+                        : error.ErrorMessage);
+            }
+        }
+    }
 }
