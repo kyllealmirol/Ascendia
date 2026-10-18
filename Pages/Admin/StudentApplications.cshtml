@@ -111,26 +111,6 @@
                                                 Reject
                                             </button>
 
-                                            <!-- Reject Modal -->
-                                            <form method="post" asp-page-handler="Reject" asp-route-id="@student.Id">
-                                                <div class="modal fade" id="rejectModal@(student.Id)" tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Reject Application - @(student.FullName ?? student.StudentName)</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p class="mb-0">Ang pag-reject ay permanenteng magde-delete sa enrollment application at hindi na ito maibabalik. Magpatuloy?</p>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                <button type="submit" class="btn btn-danger">Confirm Reject</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </form>
                                         }
                                     </td>
                                 </tr>
@@ -145,6 +125,34 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (Model.StudentsList is not null)
+            {
+                @foreach (var student in Model.StudentsList.Where(student => !string.IsNullOrWhiteSpace(student.StudentNumber)))
+                {
+                    <div class="modal fade" id="rejectModal@(student.Id)" tabindex="-1" aria-labelledby="rejectModalLabel@(student.Id)" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                            <div class="modal-content">
+                                <form method="post" asp-page-handler="Reject" asp-route-id="@student.Id">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="rejectModalLabel@(student.Id)">Reject Application - @(student.FullName ?? student.StudentName)</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Ang pag-reject ay permanenteng magde-delete sa enrollment application at hindi na ito maibabalik. Magpatuloy?</p>
+                                        <label for="rejectionReason@(student.Id)" class="form-label">Reason / Remarks for Rejection</label>
+                                        <textarea id="rejectionReason@(student.Id)" name="rejectionReason" class="form-control" rows="3" required placeholder="Maglagay ng dahilan kung bakit na-reject ang aplikasyon..."></textarea>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <button type="submit" class="btn btn-danger">Confirm Reject</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
         </div>
     </div>
 
