@@ -15,18 +15,18 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly IEnrollmentEmailSender _enrollmentEmailSender;
+        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
         private readonly ILogger<StudentApplicationsModel> _logger;
 
         public StudentApplicationsModel(
             AppDbContext context,
             IWebHostEnvironment environment,
-            IEnrollmentEmailSender enrollmentEmailSender,
+            EnrollmentEmailQueue enrollmentEmailQueue,
             ILogger<StudentApplicationsModel> logger)
         {
             _context = context;
             _environment = environment;
-            _enrollmentEmailSender = enrollmentEmailSender;
+            _enrollmentEmailQueue = enrollmentEmailQueue;
             _logger = logger;
         }
 
@@ -102,27 +102,20 @@ namespace Ascendia.Pages.Admin
             _context.Students.Remove(application);
             await _context.SaveChangesAsync(cancellationToken);
 
-            var emailSent = true;
-            try
+            var emailQueued = _enrollmentEmailQueue.TryQueueRejection(
+                studentForNotification,
+                rejectionReason);
+            if (!emailQueued)
             {
-                await _enrollmentEmailSender.SendRejectionNotificationAsync(
-                    studentForNotification,
-                    rejectionReason,
-                    cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                emailSent = false;
                 _logger.LogError(
-                    exception,
-                    "Student application {StudentId} was deleted, but the rejection email to {Email} could not be sent.",
+                    "Student application {StudentId} was deleted, but the email queue is full; no rejection email was queued for {Email}.",
                     id,
                     studentForNotification.Email);
             }
 
-            TempData["SuccessMessage"] = emailSent
-                ? "Matagumpay na na-delete ang enrollment application at naipadala ang rejection email."
-                : "Matagumpay na na-delete ang enrollment application, pero hindi naipadala ang rejection email.";
+            TempData["SuccessMessage"] = emailQueued
+                ? "Matagumpay na na-delete ang enrollment application. Naka-queue ang rejection email."
+                : "Matagumpay na na-delete ang enrollment application, pero hindi na-queue ang rejection email.";
             return RedirectToPage();
         }
 

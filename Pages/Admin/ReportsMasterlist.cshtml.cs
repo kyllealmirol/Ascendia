@@ -53,18 +53,18 @@ namespace Ascendia.Pages.Admin
 
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _environment;
-        private readonly IEnrollmentEmailSender _enrollmentEmailSender;
+        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
         private readonly ILogger<ReportsMasterlistModel> _logger;
 
         public ReportsMasterlistModel(
             AppDbContext context,
             IWebHostEnvironment environment,
-            IEnrollmentEmailSender enrollmentEmailSender,
+            EnrollmentEmailQueue enrollmentEmailQueue,
             ILogger<ReportsMasterlistModel> logger)
         {
             _context = context;
             _environment = environment;
-            _enrollmentEmailSender = enrollmentEmailSender;
+            _enrollmentEmailQueue = enrollmentEmailQueue;
             _logger = logger;
         }
 
@@ -217,18 +217,10 @@ namespace Ascendia.Pages.Admin
                 _context.Students.Remove(student);
                 await _context.SaveChangesAsync(cancellationToken);
 
-                try
-                {
-                    await _enrollmentEmailSender.SendRejectionNotificationAsync(
-                        student,
-                        rejectionReason: null,
-                        cancellationToken);
-                }
-                catch (Exception exception)
+                if (!_enrollmentEmailQueue.TryQueueRejection(student, rejectionReason: null))
                 {
                     _logger.LogError(
-                        exception,
-                        "Student application {StudentNumber} was deleted, but the rejection email to {Email} could not be sent.",
+                        "Student application {StudentNumber} was deleted, but the email queue is full; no rejection email was queued for {Email}.",
                         studentNumber,
                         student.Email);
                 }

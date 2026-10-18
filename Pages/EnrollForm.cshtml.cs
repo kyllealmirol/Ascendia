@@ -24,20 +24,20 @@ namespace Ascendia.Pages
         private readonly IWebHostEnvironment _environment;
         private readonly AppDbContext _dbContext;
         private readonly StudentNumberService _studentNumberService;
-        private readonly IEnrollmentEmailSender _enrollmentEmailSender;
+        private readonly EnrollmentEmailQueue _enrollmentEmailQueue;
         private readonly ILogger<EnrollFormModel> _logger;
 
         public EnrollFormModel(
             IWebHostEnvironment environment,
             AppDbContext dbContext,
             StudentNumberService studentNumberService,
-            IEnrollmentEmailSender enrollmentEmailSender,
+            EnrollmentEmailQueue enrollmentEmailQueue,
             ILogger<EnrollFormModel> logger)
         {
             _environment = environment;
             _dbContext = dbContext;
             _studentNumberService = studentNumberService;
-            _enrollmentEmailSender = enrollmentEmailSender;
+            _enrollmentEmailQueue = enrollmentEmailQueue;
             _logger = logger;
         }
 
@@ -318,23 +318,18 @@ namespace Ascendia.Pages
                 assignedStudentNumber = providedNumber;
             }
 
-            try
+            if (_enrollmentEmailQueue.TryQueueConfirmation(Student))
             {
-                await _enrollmentEmailSender.SendEnrollmentConfirmationAsync(
-                    Student,
-                    HttpContext.RequestAborted);
                 SuccessMessage =
-                    $"Enrollment application submitted successfully. Your student number is {assignedStudentNumber}. A confirmation email was sent to {Student.Email}.";
+                    $"Enrollment application submitted successfully. Your student number is {assignedStudentNumber}. A confirmation email has been queued for {Student.Email}.";
             }
-            catch (Exception exception)
+            else
             {
                 _logger.LogError(
-                    exception,
-                    "Enrollment was saved for student {StudentNumber}, but the confirmation email to {Email} could not be sent.",
-                    assignedStudentNumber,
-                    Student.Email);
+                    "Enrollment was saved for student {StudentNumber}, but the email queue is full; no confirmation email was queued.",
+                    assignedStudentNumber);
                 SuccessMessage =
-                    $"Enrollment application submitted successfully. Your student number is {assignedStudentNumber}, but the confirmation email could not be sent. Please contact the Registrar.";
+                    $"Enrollment application submitted successfully. Your student number is {assignedStudentNumber}, but the confirmation email could not be queued. Please contact the Registrar.";
             }
 
             return RedirectToPage();

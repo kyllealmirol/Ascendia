@@ -69,7 +69,9 @@ builder.Services.PostConfigure<SmtpSettings>(settings =>
         settings.Password)
         ?? string.Empty;
 });
+builder.Services.AddSingleton<EnrollmentEmailQueue>();
 builder.Services.AddTransient<IEnrollmentEmailSender, EnrollmentEmailSender>();
+builder.Services.AddHostedService<EnrollmentEmailWorker>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
